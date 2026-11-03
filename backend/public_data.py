@@ -11,8 +11,10 @@ import time
 from datetime import datetime
 
 from .analytics import hs_stock, number
-from .provider import Eastmoney, DataError, quote_row, source_time
+from .provider import Eastmoney, DataError, INDEX_SYMBOLS, quote_row, source_time
 from .store import TZ, now_iso
+from .taxonomy import sector_kind
+from .ths import ThsConcepts
 
 
 def tencent_rows(text, symbols):
@@ -40,6 +42,7 @@ def tencent_rows(text, symbols):
 
 
 class PublicData(Eastmoney):
+    concept_source='ths'
     def __init__(self,store,target_date=None):
         super().__init__(store,delay=.25)
         self.target_date=target_date
@@ -47,6 +50,11 @@ class PublicData(Eastmoney):
         self._sina_codes=None
         self._circuit={}
         self._session_day=None
+        self.ths=ThsConcepts(store)
+
+    def supports_flow(self,kind):
+        # The public THS cash-flow page has no independently dated flow record.
+        return kind!='concept'
 
     def begin_session(self,day):
         if day!=self._session_day:
@@ -112,7 +120,7 @@ class PublicData(Eastmoney):
         day=self.target_date or self.latest_close()
         symbols=set(self.directory())
         for kind in ('industry','concept'):
-            for board in self.store.observed('catalog:'+kind) or []:
+            for board in self.store.observed('catalog:'+sector_kind(kind)) or []:
                 for code in self.store.observed('members:'+board['code']+':'+day) or []:
                     if hs_stock({'code':code}):symbols.add(('sh' if code.startswith(('60','68')) else 'sz')+code)
         rows=self.quotes(sorted(symbols))
@@ -128,7 +136,7 @@ class PublicData(Eastmoney):
         return rows
 
     def indices(self):
-        rows=self.quotes(['sh000001','sz399001','sz399006','sh000300'])
+        rows=self.quotes(INDEX_SYMBOLS)
         stamp=source_time(rows)
         if not stamp or stamp[:10]!=(self.target_date or self.latest_close()) or stamp[11:16]<'15:00':
             raise DataError('腾讯指数未对应所选收盘日')
@@ -136,6 +144,10 @@ class PublicData(Eastmoney):
         return rows
 
     def boards(self,kind):
+        if kind=='concept':
+            rows=self.ths.boards(self.target_date or self.latest_close(),fetch=not getattr(self,'ths_cached_only',False))
+            self.sources['board_concept']='同花顺概念指数'
+            return rows
         try:
             if time.monotonic()-self._circuit.get('boards:'+kind,float('-inf'))<300:raise DataError('主行情列表本轮已失败')
             rows=super().boards(kind)
@@ -174,6 +186,8 @@ class PublicData(Eastmoney):
         return rows
 
     def flows(self,kind):
+        if kind=='concept':
+            raise DataError('同花顺概念资金流尚无可验证日期；不拼接东方财富资金')
         try:
             if time.monotonic()-self._circuit.get('flow:'+kind,float('-inf'))<300:raise DataError('资金列表本轮已失败')
             rows=super().flows(kind)
@@ -189,6 +203,11 @@ class PublicData(Eastmoney):
             return snap['payload']['rows']
 
     def membership_batch(self,catalog,day):
+        if catalog and all(r['code'].startswith('THS') for r in catalog):
+            verified=0
+            for row in catalog:
+                self.ths.members(row,day);verified+=1
+            return {'boards':len(catalog),'verified':verified}
         if day!=self.latest_close():
             raise DataError('F10 归属无历史日期接口，拒绝重建更早历史成分')
         current=datetime.now(TZ)
@@ -231,7 +250,16 @@ class PublicData(Eastmoney):
 
     def members(self,code):
         day=self.target_date or self.latest_close()
-        catalog=[r for kind in ('industry','concept') for r in self.store.observed('catalog:'+kind) or [] if r['code']==code]
+        catalog=[r for kind in ('industry','concept') for r in self.store.observed('catalog:'+sector_kind(kind)) or [] if r['code']==code]
         if not catalog:raise DataError('没有已验证的成分目录')
         self.membership_batch(catalog,day)
         return [dict(code=c) for c in self.store.observed('members:'+code+':'+day)]
+
+    def bars(self,code):
+        if code.startswith('THS'):
+            day=self.target_date or self.latest_close()
+            row=next((r for r in self.ths.catalog(day) if r['code']==code),None)
+            if not row:raise DataError('同花顺概念代码不在目录中')
+            self.ths.quote(row,day)
+            return self.store.observed('bars:'+code) or []
+        return super().bars(code)

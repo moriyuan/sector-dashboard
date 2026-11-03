@@ -1,0 +1,22 @@
+# Insert INSIDE the existing authenticated route, BEFORE its fallback handler.
+# Keep the existing TLS and authentication configuration.
+@fupan_root path /fupan
+handle @fupan_root {
+    redir * /fupan/ 308
+}
+@fupan_read {
+    method GET HEAD
+    path /fupan/ /fupan/assets/* /fupan/api/dates /fupan/api/status /fupan/api/market /fupan/api/sectors /fupan/api/sectors/* /fupan/api/gainers
+}
+handle @fupan_read {
+    encode gzip
+    uri strip_prefix /fupan
+    reverse_proxy 127.0.0.1:8788 {
+        header_up Host 127.0.0.1:8788
+        header_up -Authorization
+    }
+}
+@fupan_other path /fupan/*
+handle @fupan_other {
+    respond "Not found or method not allowed" 404
+}

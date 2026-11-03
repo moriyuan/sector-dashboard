@@ -15,6 +15,7 @@ from .store import TZ
 
 FIELDS = 'f2,f3,f6,f8,f12,f13,f14,f18,f104,f105,f106,f124'
 STOCK_FIELDS = 'f2,f3,f6,f8,f12,f13,f14,f18,f124'
+INDEX_SYMBOLS = ('sh000001', 'sz399001', 'sz399006', 'sh000300', 'sh000680')
 STOCK_FILTER = 'm:0+t:6+f:!2,m:0+t:80+f:!2,m:1+t:2+f:!2,m:1+t:23+f:!2'
 
 
@@ -42,6 +43,7 @@ def quote_row(r):
 
 
 class Eastmoney:
+    concept_source='eastmoney'
     def __init__(self, store, delay=.2):
         self.store = store
         self.delay = delay
@@ -118,7 +120,8 @@ class Eastmoney:
         return [quote_row(r) for r in self.listing('b:' + code + '+f:!50',STOCK_FIELDS)]
 
     def indices(self):
-        obj = self.get('https://push2.eastmoney.com/api/qt/ulist.np/get', dict(secids='1.000001,0.399001,0.399006,1.000300', fltt=2, fields=STOCK_FIELDS))
+        secids = ','.join(('1.' if symbol.startswith('sh') else '0.') + symbol[2:] for symbol in INDEX_SYMBOLS)
+        obj = self.get('https://push2.eastmoney.com/api/qt/ulist.np/get', dict(secids=secids, fltt=2, fields=STOCK_FIELDS))
         data = (obj.get('data') or {}).get('diff')
         if not data:
             raise DataError('指数行情为空')

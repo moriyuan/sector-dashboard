@@ -15,4 +15,17 @@ fi
 if [ ! -f frontend/dist/index.html ] || find frontend/src frontend/index.html frontend/vite.config.ts frontend/package.json -type f -newer frontend/dist/index.html | read -r newer; then
   (cd frontend && npm run build)
 fi
-exec .venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port "${SECTOR_PORT:-8788}"
+news_pid=''
+api_pid=''
+cleanup() {
+  [ -z "$news_pid" ] || kill "$news_pid" 2>/dev/null || true
+  [ -z "$api_pid" ] || kill "$api_pid" 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM
+if [ "${SECTOR_DISABLE_NEWS:-0}" != 1 ]; then
+  .venv/bin/python -m backend.news_worker &
+  news_pid=$!
+fi
+.venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port "${SECTOR_PORT:-8788}" &
+api_pid=$!
+wait "$api_pid"

@@ -1,0 +1,32 @@
+[Unit]
+Description=A-share post-close sector dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sector-dashboard
+Group=sector-dashboard
+WorkingDirectory=/opt/sector-dashboard/current
+Environment=TZ=Asia/Shanghai
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=SECTOR_DB=/var/lib/sector-dashboard/market.sqlite3
+ExecStart=/opt/sector-dashboard/venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 8788 --workers 1 --no-proxy-headers
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=45
+StateDirectory=sector-dashboard
+StateDirectoryMode=0750
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sector-dashboard
+MemoryHigh=384M
+MemoryMax=512M
+CPUQuota=100%
+
+[Install]
+WantedBy=multi-user.target

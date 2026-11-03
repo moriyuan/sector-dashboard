@@ -2,8 +2,10 @@
 import hashlib
 import json
 import sqlite3
+from contextlib import closing, contextmanager
 from datetime import datetime
 from pathlib import Path
+from threading import RLock
 from zoneinfo import ZoneInfo
 
 RULE_VERSION = 'sector-v1.0'
@@ -12,6 +14,11 @@ TZ = ZoneInfo('Asia/Shanghai')
 
 def now_iso():
     return datetime.now(TZ).isoformat(timespec='seconds')
+
+
+# Keep short transactions serial inside each process. On macOS concurrent opens
+# and WAL closes can block each other inside SQLite's POSIX fd/inode mutexes.
+_transactions = RLock()
 
 
 class Store:
@@ -32,10 +39,12 @@ class Store:
               id INTEGER PRIMARY KEY, job TEXT, time TEXT, ok INTEGER, message TEXT);
             ''')
 
+    @contextmanager
     def connect(self):
-        db = sqlite3.connect(self.path, timeout=30)
-        db.row_factory = sqlite3.Row
-        return db
+        with _transactions, closing(sqlite3.connect(self.path, timeout=30)) as db:
+            db.row_factory = sqlite3.Row
+            with db:
+                yield db
 
     def save(self, kind, trade_date, mode, payload, source_time=None):
         text = json.dumps(payload, ensure_ascii=False, allow_nan=False, sort_keys=True)
@@ -60,7 +69,7 @@ class Store:
 
     def dates(self):
         with self.connect() as db:
-            return [dict(r) for r in db.execute("SELECT trade_date,mode,MAX(id) revision FROM snapshots WHERE kind IN ('industry','concept','indices','market') GROUP BY trade_date,mode ORDER BY trade_date DESC, mode DESC")]
+            return [dict(r) for r in db.execute("SELECT trade_date,mode,MAX(id) revision FROM snapshots WHERE kind IN ('industry','concept','concept_ths','indices','market') GROUP BY trade_date,mode ORDER BY trade_date DESC, mode DESC")]
 
     def observe(self, key, payload):
         text = json.dumps(payload, ensure_ascii=False, allow_nan=False, sort_keys=True)

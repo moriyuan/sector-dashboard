@@ -1,0 +1,31 @@
+[Unit]
+Description=A-share public news collector and evidence analysis
+After=network-online.target sector-dashboard.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sector-dashboard
+Group=sector-dashboard
+WorkingDirectory=/opt/sector-dashboard/current
+Environment=PYTHONUNBUFFERED=1
+Environment=TZ=Asia/Shanghai
+Environment=SECTOR_DB=/var/lib/sector-dashboard/market.sqlite3
+EnvironmentFile=-/etc/sector-dashboard/news.env
+ExecStart=/opt/sector-dashboard/venv/bin/python -m backend.news_worker
+Restart=on-failure
+RestartSec=20
+TimeoutStopSec=90
+MemoryHigh=192M
+MemoryMax=256M
+CPUQuota=50%
+TasksMax=32
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sector-dashboard
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

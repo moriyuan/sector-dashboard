@@ -67,7 +67,7 @@ def test_partial_history_does_not_shrink_ranking_universe(tmp_path):
     db.observe('catalog:concept',[{'code':'BK0001','name':'已回补'},{'code':'BK0002','name':'未回补'}])
     db.observe('bars:BK0001',[{'date':'2026-10-28','close':10,'change':3,'amount':100}])
     with TestClient(create_app(db,collect=False)) as c:
-        got=c.get('/api/sectors?date=2026-10-28&kind=concept').json()
+        got=c.get('/api/sectors?date=2026-10-28&kind=concept&concept_source=eastmoney').json()
         assert len(got['rows'])==1
         assert got['rows'][0]['streak'] is None
         assert got['rows'][0]['matrix'][0]['percentile'] is None

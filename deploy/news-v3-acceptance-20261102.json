@@ -1,0 +1,145 @@
+{
+  "release": "20261102-news-v3",
+  "accepted_at": "2026-11-02T11:51:54+08:00",
+  "verification": {
+    "backend_tests_passed": 99,
+    "frontend_build": "passed",
+    "independent_review": "eight findings fixed with regression coverage",
+    "initial_event_groups_merged": 214
+  },
+  "model_cases": [
+    {
+      "event_id": "64434058aae96c33c77b2ffe",
+      "status": "analyzed",
+      "source_reports": 1,
+      "formal_stock_links": 0,
+      "enrichment": [
+        {
+          "status": "ok",
+          "excerpts": 9
+        }
+      ]
+    },
+    {
+      "event_id": "5aee0168320e0aff7c6b6994",
+      "status": "analyzed",
+      "source_reports": 3,
+      "formal_stock_links": 0,
+      "enrichment": [
+        {
+          "status": "unavailable",
+          "excerpts": 0
+        },
+        {
+          "status": "ok",
+          "excerpts": 1
+        }
+      ]
+    },
+    {
+      "event_id": "6c91b9de65b809195344c4ac",
+      "status": "analyzed",
+      "source_reports": 2,
+      "formal_stock_links": 0,
+      "enrichment": [
+        {
+          "status": "ok",
+          "excerpts": 1
+        }
+      ]
+    },
+    {
+      "event_id": "91e0b773b413b640c30f2592",
+      "status": "analyzed",
+      "source_reports": 1,
+      "formal_stock_links": 1,
+      "enrichment": []
+    }
+  ],
+  "public_checks": {
+    "unauth /fupan/": 401,
+    "unauth /fupan/api/news": 401,
+    "unauth /fupan/api/news/sources": 401,
+    "/fupan/assets/index-CrVIeOiQ.js": 200,
+    "/fupan/assets/index-BnKq42q7.css": 200,
+    "/": 200,
+    "/breakout/": 200,
+    "/maker/": 200,
+    "/fupan/api/dates": 200,
+    "/fupan/api/gainers?limit=5": 200,
+    "/fupan/api/sectors?kind=concept": 200,
+    "/fupan/api/news?level=focus&page_size=5": 200,
+    "POST /fupan/api/news": 404,
+    "POST /fupan/api/news/sources": 404
+  },
+  "sources": {
+    "fed": {
+      "ok": true,
+      "stale": false,
+      "window_count": 20
+    },
+    "cnbc": {
+      "ok": true,
+      "stale": false,
+      "window_count": 30
+    },
+    "nvidia": {
+      "ok": true,
+      "stale": false,
+      "window_count": 20
+    },
+    "cls": {
+      "ok": true,
+      "stale": false,
+      "window_count": 20
+    },
+    "em": {
+      "ok": true,
+      "stale": false,
+      "window_count": 200
+    },
+    "sina": {
+      "ok": true,
+      "stale": false,
+      "window_count": 100
+    }
+  },
+  "browser_checks": {
+    "local": [
+      "focus filter",
+      "source conflict",
+      "event research detail",
+      "stock filter retains keyword",
+      "industry drawer"
+    ],
+    "tokyo": [
+      "focus filter",
+      "source conflict",
+      "event research detail",
+      "stock 301358 retains keyword and focus",
+      "BK1200 loaded 2026-10-30 revision 258 with 366 valid / 377 constituents",
+      "closing sector retains filters"
+    ]
+  },
+  "screenshots": [
+    "runtime/qa/news-v3/local-detail.png",
+    "runtime/qa/news-v3/tokyo-detail.png"
+  ],
+  "deployment": {
+    "current": "/opt/sector-dashboard/releases/20261102-news-v3",
+    "database_backup": "/var/lib/sector-dashboard/market.pre-20261102-news-v3.sqlite3",
+    "backup_mode": "0600 root",
+    "rollback_release": "20261102-news-v2",
+    "gateway": "unchanged",
+    "worker": "active; CLS/EM/Sina recurring polls verified",
+    "worker_limits": "256MB and 50% CPU"
+  },
+  "limitations": [
+    "Conservative merge can leave uncertain or differently worded reports separate.",
+    "Original 16-company business mapping remains a watch list; no new supplier claims.",
+    "Some CLS article bodies are unavailable; telegraph collection remains healthy.",
+    "Legacy analyses upgrade by priority within the existing USD 1/day cap.",
+    "Missing prior disclosures or consensus remain explicit evidence gaps.",
+    "Model contract validation does not guarantee semantic correctness; four real focus cases were reviewed."
+  ]
+}

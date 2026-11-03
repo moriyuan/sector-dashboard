@@ -6,8 +6,10 @@ from .analytics import analyze, breadth, hs_stock, pool_stats, valid_stock
 from .provider import Eastmoney, DataError, source_time
 from .public_data import PublicData
 from .rankings import build_rankings, at_limit
+from .lhb import run_scheduler
 from .schedule import phase
 from .store import TZ, now_iso
+from .taxonomy import sector_kind, vendor_name
 
 
 def fresh_input(snapshot, board_time, max_seconds, mode):
@@ -33,6 +35,7 @@ class Collector:
     def __init__(self, store, provider=None):
         self.store = store
         self.provider = provider or PublicData(store)
+        self.concept_source=getattr(self.provider,'concept_source','ths')
         self.stop = threading.Event()
         self.thread = None
         self.last = {}
@@ -110,12 +113,15 @@ class Collector:
             self.store.event('pools',True,'情绪池已归档')
 
     def flow(self, kind):
+        if hasattr(self.provider,'supports_flow') and not self.provider.supports_flow(kind):
+            self.store.event('flow_'+kind,True,'同花顺概念资金暂无独立日期核验；保留空值，不混用东方财富资金')
+            return
         rows = self.provider.flows(kind)
         stamp = source_time(list(rows.values()))
         if not stamp:
             raise DataError('资金数据缺少交易日期，无法绑定行情快照')
         day, mode = close_session(stamp)
-        self.store.save('flow_'+kind,day,mode,{'rows':rows,'source':getattr(self.provider,'sources',{}).get('flow_'+kind,'东方财富')},stamp)
+        self.store.save('flow_'+sector_kind(kind,self.concept_source),day,mode,{'rows':rows,'source':getattr(self.provider,'sources',{}).get('flow_'+kind,vendor_name(kind,self.concept_source))},stamp)
 
     def boards(self, kind):
         rows = self.provider.boards(kind)
@@ -127,20 +133,20 @@ class Collector:
             raise DataError('板块行情缺少交易日期，拒绝绑定采集日期')
         day, mode = close_session(stamp)
         self.catalog[kind] = rows
-        self.store.observe('catalog:'+kind, rows)
+        self.store.observe('catalog:'+sector_kind(kind,self.concept_source), rows)
         market = self.store.snapshot('market',day,mode)
         stock_snapshot = self.store.snapshot('stocks',day,mode)
         stocks_fresh = fresh_input(stock_snapshot,stamp,120,mode)
         market_fresh = fresh_input(market,stamp,120,mode)
         stock_map = {r['code']:r for r in stock_snapshot['payload']['rows']} if stocks_fresh else {}
         market_amount = market['payload']['stats']['amount'] if market_fresh else None
-        flow = self.store.snapshot('flow_'+kind,day,mode)
+        flow = self.store.snapshot('flow_'+sector_kind(kind,self.concept_source),day,mode)
         flow_rows = flow['payload']['rows'] if fresh_input(flow,stamp,360,mode) else {}
         histories = {}
         refs = {'stocks':stock_snapshot['id'] if stock_snapshot else None,'bars':{},'members':{},'members_meta':{}}
         pool_snapshot = self.store.snapshot('pools',day,mode)
         refs['pools'] = pool_snapshot['id'] if pool_snapshot else None
-        previous = self.store.history(kind,day)
+        previous = self.store.history(sector_kind(kind,self.concept_source),day)
         for r in rows:
             code = r['code']
             member_record = self.store.observation_record('members:'+code+':'+day)
@@ -157,6 +163,8 @@ class Collector:
             # A missing quote is not a flat/declining constituent. Require all mapped quotes.
             r['up_ratio'] = member_stats['up_ratio'] if r['coverage'] == 1 else None
             r['membership_verified']=member_meta['payload']['verified'] if member_meta else member_codes is not None
+            if r.get('taxonomy')=='ths' and r.get('expected_count') is not None:
+                r['membership_verified']=bool(r['membership_verified'] and member_codes is not None and len(member_codes)==r['expected_count'])
             if not r['membership_verified']:
                 r['up_ratio']=None
             r['valid_coverage']=member_stats['coverage']
@@ -174,7 +182,10 @@ class Collector:
             histories[code] = bar_record['payload'] if bar_record else []
         cal = self.store.observed('calendar') or []
         analyzed = analyze(rows,histories,previous,day,mode,cal)
-        self.store.save(kind,day,mode,{'rows':analyzed,'scope':'东方财富板块指数；成分广度统计沪深非ST有效交易股票',
+        self.store.save(sector_kind(kind,self.concept_source),day,mode,{'rows':analyzed,'scope':vendor_name(kind,self.concept_source)+'板块指数；成分广度统计沪深非ST有效交易股票',
+                                     'taxonomy':self.concept_source if kind=='concept' else 'eastmoney',
+                                     'quote_coverage':sum(r.get('quote_status') not in ('missing','stale') and r.get('price') is not None for r in rows)/len(rows),
+                                     'flow_status':'unavailable' if kind=='concept' and not flow else 'available' if flow else 'missing',
                                      'ingestion_method':getattr(self.provider,'ingestion_method','automatic'),
                                      'source':getattr(self.provider,'sources',{}).get('board_'+kind,'东方财富'),
                                      'input_refs':refs,
@@ -194,7 +205,7 @@ class Collector:
         day = current.date().isoformat()
         checkpoint = bar_checkpoint(current)
         for kind in ('industry','concept'):
-            rows = self.catalog.get(kind) or self.store.observed('catalog:'+kind) or []
+            rows = self.catalog.get(kind) or self.store.observed('catalog:'+sector_kind(kind,self.concept_source)) or []
             for r in rows:
                 code = r['code']
                 member_key = 'members:'+code+':'+day
@@ -233,7 +244,7 @@ class Collector:
         current = datetime.now(TZ)
         self.status = phase(current,cal)
         day = current.date().isoformat()
-        archive_key = 'archive:'+day+':'+self.status
+        archive_key = 'archive:'+day+':'+self.status+':'+self.concept_source+'-v1'
         need_archive = self.status.startswith('archive') and self.store.observed(archive_key) is None
         active = self.status.startswith('archive') and (initial or need_archive)
         if active:
@@ -255,10 +266,13 @@ class Collector:
                 refreshed=bool(self.job('board_'+kind,lambda k=kind:self.boards(k))) or refreshed
             if refreshed:build_rankings(self.store,day)
             if need_archive:
-                snapshots = [self.store.snapshot(k,day,'close') for k in ('industry','concept','market','indices','pools','flow_industry','flow_concept')]
+                required=['industry',sector_kind('concept',self.concept_source),'market','indices','pools','flow_industry']
+                if not hasattr(self.provider,'supports_flow') or self.provider.supports_flow('concept'):required.append('flow_'+sector_kind('concept',self.concept_source))
+                snapshots = [self.store.snapshot(k,day,'close') for k in required]
                 complete_pools=bool(snapshots[4]) and all(v is not None for v in snapshots[4]['payload']['pools'].values())
                 fresh_sources=all('存档' not in s['payload'].get('source','') for s in snapshots if s)
-                if complete_pools and fresh_sources and all(s and s['collected_at'][:10]==day and s['collected_at'][11:16] >= ('16:30' if self.status=='archive_1630' else '15:30') for s in snapshots):
+                complete_quotes=all(s and s['payload'].get('quote_coverage',1)==1 for s in snapshots[:2])
+                if complete_quotes and complete_pools and fresh_sources and all(s and s['collected_at'][:10]==day and s['collected_at'][11:16] >= ('16:30' if self.status=='archive_1630' else '15:30') for s in snapshots):
                     self.store.observe(archive_key,{'revisions':[s['id'] for s in snapshots]})
         return active
 
@@ -285,6 +299,11 @@ class Collector:
     def start(self):
         self.thread = threading.Thread(target=self.run,daemon=True,name='sector-collector')
         self.thread.start()
+        self.lhb_thread = threading.Thread(target=run_scheduler,args=(self.store,self.stop),daemon=True,name='lhb-collector')
+        self.lhb_thread.start()
+        from .etf_tracker import run_scheduler as run_etf
+        self.etf_thread=threading.Thread(target=run_etf,args=(self.store,self.stop),daemon=True,name='broad-etf')
+        self.etf_thread.start()
 
     def shutdown(self):
         self.stop.set()

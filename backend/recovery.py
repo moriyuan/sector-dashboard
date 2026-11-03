@@ -3,6 +3,7 @@ from datetime import datetime
 from .provider import DataError
 from .store import TZ
 from .rankings import build_rankings
+from .taxonomy import sector_kind
 
 
 def recover(collector,limit=0):
@@ -19,7 +20,7 @@ def recover(collector,limit=0):
         return result
     for kind in ('industry','concept'):
         step('board_'+kind,lambda k=kind:collector.boards(k))
-        snapshot=collector.store.snapshot(kind,day,'close')
+        snapshot=collector.store.snapshot(sector_kind(kind,getattr(provider,'concept_source','ths')),day,'close')
         if snapshot:
             step('members_'+kind,lambda s=snapshot:provider.membership_batch(s['payload']['rows'],day))
     step('market',collector.market)

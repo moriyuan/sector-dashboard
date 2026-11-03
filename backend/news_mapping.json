@@ -1,0 +1,433 @@
+[
+  {
+    "id": "b688256-ai-20261102-v1",
+    "code": "688256",
+    "name": "寒武纪",
+    "theme": "ai",
+    "business": "智能计算芯片、加速卡和系统",
+    "url": "https://cambricon.com/",
+    "verify_terms": [
+      "智能计算"
+    ],
+    "verified": true,
+    "base_id": "b688256-ai",
+    "event_terms": [
+      "人工智能",
+      "AI",
+      "人工智能芯片",
+      "加速卡",
+      "算力",
+      "NVIDIA",
+      "英伟达",
+      "data center"
+    ],
+    "excerpt": "公司官网展示思元系列云端智能加速卡、边缘计算模组及软件开发平台，面向人工智能计算。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b688041-ai-20261102-v1",
+    "code": "688041",
+    "name": "海光信息",
+    "theme": "ai",
+    "business": "CPU计算产品；不凭此页面推定DCU市场地位",
+    "url": "https://www.hygon.cn/product/cpu",
+    "verify_terms": [
+      "CPU"
+    ],
+    "verified": true,
+    "base_id": "b688041-ai",
+    "event_terms": [
+      "CPU",
+      "DCU",
+      "数据中心",
+      "算力",
+      "AI",
+      "NVIDIA",
+      "英伟达",
+      "data center"
+    ],
+    "excerpt": "公司官网列示7000、5000、3000系列CPU；应用场景包括云计算、数据中心及人工智能。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b300274-energy-20261102-v1",
+    "code": "300274",
+    "name": "阳光电源",
+    "theme": "energy",
+    "business": "光伏逆变器与储能系统",
+    "url": "https://basic.10jqka.com.cn/300274/operate.html",
+    "verify_terms": [
+      "光伏逆变"
+    ],
+    "verified": true,
+    "base_id": "b300274-energy",
+    "event_terms": [
+      "光伏",
+      "储能",
+      "solar",
+      "storage",
+      "inverter"
+    ],
+    "excerpt": "公开主营业务列示光伏逆变器、储能系统、风电变流等新能源电源设备。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b300763-energy-20261102-v1",
+    "code": "300763",
+    "name": "锦浪科技",
+    "theme": "energy",
+    "business": "分布式光伏逆变器",
+    "url": "https://basic.10jqka.com.cn/300763/operate.html",
+    "verify_terms": [
+      "分布式光"
+    ],
+    "verified": true,
+    "base_id": "b300763-energy",
+    "event_terms": [
+      "光伏",
+      "逆变器",
+      "solar",
+      "inverter"
+    ],
+    "excerpt": "主营业务为组串式逆变器研发、生产、销售与服务，产品包括并网逆变器和储能逆变器。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b002594-auto-20261102-v1",
+    "code": "002594",
+    "name": "比亚迪",
+    "theme": "auto",
+    "business": "新能源汽车及相关电池业务",
+    "url": "https://basic.10jqka.com.cn/002594/operate.html",
+    "verify_terms": [
+      "新能源汽"
+    ],
+    "verified": true,
+    "base_id": "b002594-auto",
+    "event_terms": [
+      "新能源汽车",
+      "电动车",
+      "electric vehicle",
+      "EV sales",
+      "比亚迪",
+      "Tesla"
+    ],
+    "excerpt": "公开主营业务涵盖新能源汽车、电子、二次充电电池及光伏，汽车是其产品类型之一。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b600733-auto-20261102-v1",
+    "code": "600733",
+    "name": "北汽蓝谷",
+    "theme": "auto",
+    "business": "纯电动乘用车",
+    "url": "https://basic.10jqka.com.cn/600733/operate.html",
+    "verify_terms": [
+      "纯电动乘"
+    ],
+    "verified": true,
+    "base_id": "b600733-auto",
+    "event_terms": [
+      "新能源汽车",
+      "电动车",
+      "乘用车",
+      "electric vehicle",
+      "EV sales"
+    ],
+    "excerpt": "主营业务为新能源乘用车与核心零部件的研发、生产、销售和服务。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b300760-health-20261102-v1",
+    "code": "300760",
+    "name": "迈瑞医疗",
+    "theme": "health",
+    "business": "生命信息、医学影像与体外诊断设备",
+    "url": "https://basic.10jqka.com.cn/300760/operate.html",
+    "verify_terms": [
+      "生命信息"
+    ],
+    "verified": true,
+    "base_id": "b300760-health",
+    "event_terms": [
+      "医疗器械",
+      "医学影像",
+      "诊断",
+      "medical device",
+      "diagnostic"
+    ],
+    "excerpt": "主营为医疗器械研发、制造、营销及服务，产品涵盖体外诊断、生命信息与支持和医学影像。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b688271-health-20261102-v1",
+    "code": "688271",
+    "name": "联影医疗",
+    "theme": "health",
+    "business": "医学影像与放疗设备",
+    "url": "https://basic.10jqka.com.cn/688271/operate.html",
+    "verify_terms": [
+      "医学影像"
+    ],
+    "verified": true,
+    "base_id": "b688271-health",
+    "event_terms": [
+      "医学影像",
+      "医疗设备",
+      "medical imaging",
+      "scanner"
+    ],
+    "excerpt": "面向客户提供医学影像设备、放射治疗产品及生命科学仪器。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b601899-resources-20261102-v1",
+    "code": "601899",
+    "name": "紫金矿业",
+    "theme": "resources",
+    "business": "铜金等矿产勘探开采",
+    "url": "https://basic.10jqka.com.cn/601899/operate.html",
+    "verify_terms": [
+      "铜金等矿"
+    ],
+    "verified": true,
+    "base_id": "b601899-resources",
+    "event_terms": [
+      "黄金",
+      "铜",
+      "金矿",
+      "gold",
+      "copper"
+    ],
+    "excerpt": "公开主营为铜、金、锌等金属矿产资源勘探、开发及相关业务；仅据此建立产品层面的关联。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b603993-resources-20261102-v1",
+    "code": "603993",
+    "name": "洛阳钼业",
+    "theme": "resources",
+    "business": "铜钴等矿产采选与多金属业务",
+    "url": "https://basic.10jqka.com.cn/603993/operate.html",
+    "verify_terms": [
+      "铜钴等矿"
+    ],
+    "verified": true,
+    "base_id": "b603993-resources",
+    "event_terms": [
+      "铜",
+      "钴",
+      "钼",
+      "copper",
+      "cobalt"
+    ],
+    "excerpt": "公开业务涉及铜、钴、钼等矿产采选及贸易；仅据此建立产品层面的关联。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b688981-chips-20261102-v1",
+    "code": "688981",
+    "name": "中芯国际",
+    "theme": "chips",
+    "business": "集成电路晶圆代工",
+    "url": "https://www.smics.com/uploads/67f640fd/688981.pdf",
+    "verify_terms": [
+      "集成电路"
+    ],
+    "verified": true,
+    "base_id": "b688981-chips",
+    "event_terms": [
+      "半导体",
+      "芯片",
+      "晶圆",
+      "chip",
+      "semiconductor",
+      "foundry"
+    ],
+    "excerpt": "公司年报列示集成电路晶圆制造代工业务；产品为晶圆，并提供相关配套技术服务。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": "2024-12-31",
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b688347-chips-20261102-v1",
+    "code": "688347",
+    "name": "华虹公司",
+    "theme": "chips",
+    "business": "特色工艺晶圆代工",
+    "url": "https://basic.10jqka.com.cn/688347/operate.html",
+    "verify_terms": [
+      "特色工艺"
+    ],
+    "verified": true,
+    "base_id": "b688347-chips",
+    "event_terms": [
+      "半导体",
+      "芯片",
+      "晶圆",
+      "chip",
+      "semiconductor",
+      "foundry"
+    ],
+    "excerpt": "经营评述列示嵌入式及独立式非易失性存储器、模拟与电源管理、逻辑射频和功率器件等特色晶圆代工服务。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b601689-robot-20261102-v1",
+    "code": "601689",
+    "name": "拓普集团",
+    "theme": "robot",
+    "business": "汽车零部件与机器人执行器布局",
+    "url": "https://basic.10jqka.com.cn/601689/operate.html",
+    "verify_terms": [
+      "汽车零部"
+    ],
+    "verified": true,
+    "base_id": "b601689-robot",
+    "event_terms": [
+      "机器人",
+      "具身智能",
+      "robot",
+      "humanoid",
+      "robots",
+      "robotics"
+    ],
+    "excerpt": "经营评述披露具身智能业务以机器人执行器为核心，向躯体结构件延伸，并设立机器人执行器事业部。资料未确认任何特定海外新闻主体的供货关系。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名",
+    "relation_type": "supply_chain",
+    "chain_verified": true,
+    "chain_scope": "机器人系统到执行器产品环节；非指定客户供应关系"
+  },
+  {
+    "id": "b002050-robot-20261102-v1",
+    "code": "002050",
+    "name": "三花智控",
+    "theme": "robot",
+    "business": "热管理与机器人机电执行器布局",
+    "url": "https://basic.10jqka.com.cn/002050/operate.html",
+    "verify_terms": [
+      "热管理与"
+    ],
+    "verified": true,
+    "base_id": "b002050-robot",
+    "event_terms": [
+      "机器人",
+      "具身智能",
+      "robot",
+      "humanoid",
+      "robots",
+      "robotics"
+    ],
+    "excerpt": "经营评述披露公司从热管理及汽车零部件业务向仿生机器人机电执行器拓展。该业务布局不证明已获特定机器人公司的订单。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名",
+    "relation_type": "supply_chain",
+    "chain_verified": true,
+    "chain_scope": "机器人系统到执行器产品环节；非指定客户供应关系"
+  },
+  {
+    "id": "b600519-consumer-20261102-v1",
+    "code": "600519",
+    "name": "贵州茅台",
+    "theme": "consumer",
+    "business": "茅台酒",
+    "url": "https://basic.10jqka.com.cn/600519/operate.html",
+    "verify_terms": [
+      "茅台酒"
+    ],
+    "verified": true,
+    "base_id": "b600519-consumer",
+    "event_terms": [
+      "白酒",
+      "茅台",
+      "liquor",
+      "spirits"
+    ],
+    "excerpt": "主营业务为茅台酒及系列酒的生产与销售。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  },
+  {
+    "id": "b600887-consumer-20261102-v1",
+    "code": "600887",
+    "name": "伊利股份",
+    "theme": "consumer",
+    "business": "乳制品",
+    "url": "https://basic.10jqka.com.cn/600887/operate.html",
+    "verify_terms": [
+      "乳制品"
+    ],
+    "verified": true,
+    "base_id": "b600887-consumer",
+    "event_terms": [
+      "乳业",
+      "乳品",
+      "乳制品",
+      "牛奶",
+      "dairy",
+      "milk"
+    ],
+    "excerpt": "主营业务为各类乳品及健康饮品生产与销售，产品包括液体乳、奶粉、奶制品及冷饮。",
+    "verified_at": "2026-11-01T17:38:10+00:00",
+    "role": "产业代表",
+    "source_date": null,
+    "review_status": "人工逐条核对业务片段",
+    "evidence_kind": "业务资料摘要；不构成行业地位排名"
+  }
+]

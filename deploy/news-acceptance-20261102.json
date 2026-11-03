@@ -1,0 +1,400 @@
+{
+  "reviewed_at": "2026-11-02",
+  "reviewer": "Codex逐条核验；非用户人工签收",
+  "count": 39,
+  "themes": [
+    "ai",
+    "auto",
+    "chips",
+    "consumer",
+    "energy",
+    "health",
+    "resources",
+    "robot"
+  ],
+  "sources": [
+    "cnbc",
+    "fed",
+    "nvidia",
+    "sina"
+  ],
+  "checks": [
+    "发布时间与来源链接",
+    "原始事实与模型摘要",
+    "股票代码及公司同名歧义",
+    "关联类型及证据编号",
+    "不确定性与行情日期",
+    "行业代表与市场排名分开"
+  ],
+  "corrections": [
+    "排除中科西光航天科技集团与航天科技000901的子串误匹配",
+    "修正英伟达谷歌云Vera Rubin下月可用的时态，保留原分析修订"
+  ],
+  "events": [
+    {
+      "id": "377290c93a4e7db1e7e37563",
+      "title": "欧佩克+周日会议声明称，12月石油产量配额维持不变。",
+      "themes": [],
+      "analysis_revision": 499,
+      "types": []
+    },
+    {
+      "id": "2b59969d5cba9502adf185f9",
+      "title": "欧佩克+小组将于11月29日举行下一次月度会议。",
+      "themes": [],
+      "analysis_revision": 500,
+      "types": []
+    },
+    {
+      "id": "451a270b8be979f37a1f6c20",
+      "title": "伊朗对土耳其铜阴极出口创历史新高",
+      "themes": [
+        "resources"
+      ],
+      "analysis_revision": 502,
+      "types": [
+        "business"
+      ]
+    },
+    {
+      "id": "3d585ed55d74e69cea3065b2",
+      "title": "欧佩克+七国决定维持2026年12月原油产量配额不变",
+      "themes": [
+        "resources"
+      ],
+      "analysis_revision": 504,
+      "types": []
+    },
+    {
+      "id": "e5697f23a511b830dd0db28c",
+      "title": "俄方打击致乌克兰第聂伯罗停电，泽连斯基警告更多导弹袭击",
+      "themes": [
+        "resources"
+      ],
+      "analysis_revision": 506,
+      "types": []
+    },
+    {
+      "id": "65dd9dbd32c022f6adb20432",
+      "title": "奥精医疗涉嫌财务数据虚假记载遭证监会立案",
+      "themes": [
+        "health"
+      ],
+      "analysis_revision": 491,
+      "types": [
+        "direct"
+      ]
+    },
+    {
+      "id": "d58129264e67e37e822f2375",
+      "title": "美议员称中东战争让美国民众苦不堪言：柴油与食品价格创新高",
+      "themes": [
+        "health",
+        "consumer"
+      ],
+      "analysis_revision": 508,
+      "types": []
+    },
+    {
+      "id": "1bb4854c78613568f24f57d4",
+      "title": "秘鲁10月利马消费者物价指数同比上涨5.25%",
+      "themes": [
+        "consumer"
+      ],
+      "analysis_revision": 493,
+      "types": []
+    },
+    {
+      "id": "736376abfc1480c152632e50",
+      "title": "美联储发布2025年美国家庭消费者财务状况调查结果",
+      "themes": [
+        "consumer"
+      ],
+      "analysis_revision": 510,
+      "types": []
+    },
+    {
+      "id": "3e4e782a0b2919e6913bea0b",
+      "title": "OpenAI计划在美国中期选举后推出政策倡议并加强人工智能监管布局",
+      "themes": [
+        "ai"
+      ],
+      "analysis_revision": 512,
+      "types": [
+        "business"
+      ]
+    },
+    {
+      "id": "eeaf327f3b05f23091fba459",
+      "title": "AI产业链三季报表现突出，机构称后续业绩环比改善确定性较强",
+      "themes": [
+        "ai"
+      ],
+      "analysis_revision": 514,
+      "types": [
+        "business",
+        "direct"
+      ]
+    },
+    {
+      "id": "c3387f622e1cdf54cdb44b48",
+      "title": "英伟达称欧洲云合作伙伴扩容区域AI算力",
+      "themes": [
+        "ai"
+      ],
+      "analysis_revision": 516,
+      "types": [
+        "business"
+      ]
+    },
+    {
+      "id": "f3fd7dc2b1ec3c5bea9403f9",
+      "title": "美联储发布FOMC声明",
+      "themes": [],
+      "analysis_revision": 518,
+      "types": []
+    },
+    {
+      "id": "e56d592c7c7cbf2f6e244061",
+      "title": "美联储宣布终止对SNB Bancshares及Bank of Eufaula的执法行动",
+      "themes": [],
+      "analysis_revision": 520,
+      "types": []
+    },
+    {
+      "id": "7f1c2989ef2cff5a07fd3c14",
+      "title": "美联储对三家机构前员工采取执法行动",
+      "themes": [],
+      "analysis_revision": 522,
+      "types": []
+    },
+    {
+      "id": "06524c3eaf326aa98ff8f014",
+      "title": "英伟达与供应链伙伴扩产以加速AI基础设施建设",
+      "themes": [
+        "ai"
+      ],
+      "analysis_revision": 524,
+      "types": [
+        "business"
+      ]
+    },
+    {
+      "id": "8c5c190be7fd10f6fbf943e4",
+      "title": "英伟达与谷歌云宣布 Vera Rubin 基础设施将于下月正式可用",
+      "themes": [
+        "ai"
+      ],
+      "analysis_revision": 984,
+      "types": [
+        "business"
+      ]
+    },
+    {
+      "id": "5ff7109940aeb2576a25c05c",
+      "title": "英伟达在欧洲推广Earth-2开放模型用于天气与气候预测",
+      "themes": [
+        "ai",
+        "energy"
+      ],
+      "analysis_revision": 495,
+      "types": [
+        "business"
+      ]
+    },
+    {
+      "id": "0a0c0e8538d7f1ef62f8ae3a",
+      "title": "海外科技股承压：纳斯达克期货下跌、加密市场遭遇史上最大黑客攻击",
+      "themes": [],
+      "analysis_revision": 526,
+      "types": []
+    },
+    {
+      "id": "3f63413c819a41402e9b3191",
+      "title": "瑞士央行靠黄金与海外资产录得230亿美元利润",
+      "themes": [
+        "resources"
+      ],
+      "analysis_revision": 528,
+      "types": [
+        "business"
+      ]
+    },
+    {
+      "id": "190f93280d8ae1f0817afa9d",
+      "title": "【沪市公司10月已实施回购超326亿元，分红、增持同步发力】10月以来，面对市场调整，沪市上市公司通过回购、增持及分红等方式传递市场信心。10月，714家沪市公司累计披露增持回购及",
+      "themes": [],
+      "analysis_revision": 529,
+      "types": []
+    },
+    {
+      "id": "7a4b5007386080a08ced0943",
+      "title": "巴克莱资本沙特公司获安排类业务牌照。",
+      "themes": [],
+      "analysis_revision": 530,
+      "types": []
+    },
+    {
+      "id": "20bb7ac845a7f18fa485b98a",
+      "title": "【泽连斯基称对俄境内军事设施发动远程打击】乌克兰总统泽连斯基11月1日在社交媒体发文称，乌军对俄罗斯罗斯托夫州发动远程打击，包括“卡缅斯基联合企业”在内的军工设施遭到打击。 泽连斯",
+      "themes": [],
+      "analysis_revision": 531,
+      "types": []
+    },
+    {
+      "id": "c1fff7bd152a9ac398c88fd0",
+      "title": "【皇冠新材：11月3日在深交所主板上市】皇冠新材公告称，公司首次公开发行的人民币普通股股票将于2026年11月3日在深圳证券交易所主板上市，证券简称“皇冠新材”，证券代码“0013",
+      "themes": [],
+      "analysis_revision": 532,
+      "types": []
+    },
+    {
+      "id": "74f10b0d98b9222e2d7c128e",
+      "title": "【中国-南亚国家减贫与发展合作论坛在巴基斯坦举行】2026中国-南亚国家减贫与发展合作论坛日前在巴基斯坦首都伊斯兰堡举行。来自中国、巴基斯坦、尼泊尔、孟加拉国等国的政府官员、外交使",
+      "themes": [],
+      "analysis_revision": 533,
+      "types": []
+    },
+    {
+      "id": "b79523fa90364f4915541af1",
+      "title": "印度煤炭公司10月总供应量达7030万吨。",
+      "themes": [],
+      "analysis_revision": 534,
+      "types": []
+    },
+    {
+      "id": "f761211dcb43af442fab5d41",
+      "title": "【中科西光航天加快布局空天地通信网络】11月1日，记者从西安中科西光航天科技集团有限公司获悉，该公司近日与西安电子科技大学空天地一体化综合业务网全国重点实验室正式签约，双方将围绕“",
+      "themes": [],
+      "analysis_revision": 496,
+      "types": []
+    },
+    {
+      "id": "51ba9cb0658c1f9d70ee2d15",
+      "title": "据俄罗斯方面消息，俄罗斯国家统计局局长表示，10月29日至11月1日期间该机构遭受网络攻击，但数据未遭泄露。",
+      "themes": [],
+      "analysis_revision": 535,
+      "types": []
+    },
+    {
+      "id": "69e0dd64212433e136db8aa8",
+      "title": "强生报告称，在高风险经皮冠状动脉介入治疗（HRPCI）中使用Impella装置取得了积极的生存率和治疗结果。",
+      "themes": [],
+      "analysis_revision": 536,
+      "types": []
+    },
+    {
+      "id": "166eb7d28fde5ee30779ad7b",
+      "title": "据伊朗方面消息，外长阿拉格齐就与卡塔尔斡旋方会谈表示：我们希望对方保持理性。",
+      "themes": [],
+      "analysis_revision": 537,
+      "types": []
+    },
+    {
+      "id": "5f800a282bda644391925d65",
+      "title": "伊朗外交部长阿拉格奇在与卡塔尔调解人的会谈中表示：谈判正在进行并取得进展，但我们尚未得出最终结论。",
+      "themes": [],
+      "analysis_revision": 538,
+      "types": []
+    },
+    {
+      "id": "41a32203fa4e347da8ae749f",
+      "title": "伊朗外长阿拉格齐：能否取得成果取决于美方的答复。",
+      "themes": [],
+      "analysis_revision": 539,
+      "types": []
+    },
+    {
+      "id": "0b31ece528a52fa6678a4d19",
+      "title": "【韩国多地竞标新建监狱以提振经济】据韩国媒体报道，韩国多个地方政府正在竞标新建监狱，希望借此促进人口流入、增加就业岗位、提振当地经济。《韩国时报》10月31日报道，韩国法务部今年8",
+      "themes": [],
+      "analysis_revision": 540,
+      "types": []
+    },
+    {
+      "id": "bc5c635e86bbe19da704a96b",
+      "title": "白宫国家经济委员会主任哈塞特：特朗普不会签署任何推翻其政策的法案。",
+      "themes": [],
+      "analysis_revision": 541,
+      "types": []
+    },
+    {
+      "id": "f161dc27cb5b9b1a9ca2dc35",
+      "title": "【伊朗外长：磋商是否能取得成果取决于美国的答复】当地时间1日，在谈及伊朗代表团访问卡塔尔事宜时，伊朗外长阿拉格齐表示，此次访问由副外长率领，目的是继续与卡塔尔调解方进行磋商。阿拉格",
+      "themes": [],
+      "analysis_revision": 542,
+      "types": []
+    },
+    {
+      "id": "a0d536624393e5e8d2999071",
+      "title": "小米汽车称2026年10月交付量超过5万台",
+      "themes": [
+        "auto"
+      ],
+      "analysis_revision": 977,
+      "types": []
+    },
+    {
+      "id": "c2bdac0a5a258f38ac7aaa6d",
+      "title": "上汽MG公布2026年10月全球新能源销量超8.5万台",
+      "themes": [
+        "energy"
+      ],
+      "analysis_revision": 979,
+      "types": []
+    },
+    {
+      "id": "e2c7a56d2f7df865ddca5ff7",
+      "title": "韩国1至10月出口额首次突破9000亿美元，预计11月全年出口有望达1万亿美元",
+      "themes": [
+        "chips"
+      ],
+      "analysis_revision": 981,
+      "types": [
+        "business"
+      ]
+    },
+    {
+      "id": "79193ef0e24a4caaafd3d83e",
+      "title": "B站举办2026超级科学晚，脑机接口、可控核聚变等前沿科技议题亮相",
+      "themes": [
+        "robot",
+        "auto"
+      ],
+      "analysis_revision": 983,
+      "types": [
+        "supply_chain"
+      ]
+    }
+  ],
+  "evidence_sha256": "064f91800dbbe4131292fff081dac0d9cb89220442a0a0e11419332621380607",
+  "follow_up_20261102_news_v2": {
+    "tests_passed": 85,
+    "public_acceptance": "runtime/deploy/public-acceptance-20261102-v2.json",
+    "sources_healthy": 6,
+    "two_successive_cycles_beijing": [
+      "2026-11-02 02:49",
+      "2026-11-02 02:51"
+    ],
+    "source_windows": {
+      "cls": 20,
+      "em": 200
+    },
+    "duplicate_revisions": {
+      "cls": 0,
+      "em": 0
+    },
+    "browser_checks": [
+      "event detail opens",
+      "stock 002050 filters related news",
+      "industry BK0456 date 2026-10-30 revision 258",
+      "concept THS309127 date 2026-10-30 revision 260",
+      "closing board preserves filters"
+    ],
+    "browser_method": "Tokyo HTTPS responses through temporary authenticated loopback proxy; native clicks with 120 ms press/release",
+    "screenshots": [
+      "runtime/news-tokyo-detail-verified.jpg",
+      "runtime/news-tokyo-concept-verified.jpg"
+    ]
+  }
+}

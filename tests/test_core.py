@@ -106,3 +106,23 @@ def test_cold_requires_sixty_daily_denominators(tmp_path):
     incomplete=[a for a in archived if a['date']!=dates[-3]]
     got={r['code']:r for r in analyze(rows,histories,incomplete,dates[-1],'close',dates)}
     assert got['0']['cold'] is False
+
+
+def test_store_transactions_release_descriptors_on_exit(tmp_path):
+    import sqlite3
+    import pytest
+    from backend.store import Store
+
+    store = Store(tmp_path / 'market.sqlite3')
+    with store.connect() as db:
+        db.execute("insert into events(job, ok) values ('committed', 1)")
+    with pytest.raises(sqlite3.ProgrammingError):
+        db.execute('select 1')
+    with pytest.raises(ValueError):
+        with store.connect() as failed:
+            failed.execute("insert into events(job, ok) values ('rolled back', 0)")
+            raise ValueError('abort')
+    with pytest.raises(sqlite3.ProgrammingError):
+        failed.execute('select 1')
+    with store.connect() as db:
+        assert [r[0] for r in db.execute('select job from events')] == ['committed']

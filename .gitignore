@@ -12,3 +12,16 @@ __pycache__/
 .DS_Store
 *.py[cod]
 *.tsbuildinfo
+
+# Private keys and local database copies
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+
+# Locally licensed font; repository redistribution is restricted
+frontend/src/assets/cabinet-grotesk.woff2
+frontend/public/assets/Cabinet-Grotesk-license.txt
