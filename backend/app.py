@@ -39,6 +39,9 @@ def create_app(store=None, collect=True):
     from .etf_tracker import router as etf_router
     app.include_router(etf_router(store))
 
+    from .backlog import router as backlog_router
+    app.include_router(backlog_router(store))
+
     def date_value(value):
         if value:
             try:

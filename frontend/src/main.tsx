@@ -13,6 +13,7 @@ import Gainers from './Gainers';
 import EtfTracker from './EtfTracker';
 import {CapitalFlow, FlowPeriods, type Flow} from './CapitalFlow';
 import News from './News';
+import Backlog from './Backlog';
 import {LhbDrawer,type StockPick} from './Lhb';
 import type {Opening} from './GainerNews';
 import './research.css';
@@ -120,7 +121,7 @@ function App(){
    <ArchivePicker label="交易日期" value={date} dates={options} emptyText={dateHint} snapshots={dates.snapshots.map(d=>d.trade_date)}
      shortcut={{label:dates.snapshots.length?'最新快照':'最新指数日',value:dates.snapshots[0]?.trade_date||options[0]||''}}
      onChange={next=>{if(next===date)return;setData(null);setMarket(null);setDate(next);setConceptSource('ths');setSelected(null);}}/></div>
-   <Button type="primary" className="desk-refresh" loading={loading} onClick={()=>setRefresh(v=>v+1)}>刷新</Button></>:<a className="nav-back" href="#overview">市场总览 ↗</a>}</DeskNav>
+   <Button type="primary" className="desk-refresh" loading={loading} onClick={()=>setRefresh(v=>v+1)}>刷新</Button><Backlog/></>:<a className="nav-back" href="#overview">市场总览 ↗</a>}</DeskNav>
  <main id="top" className="research-page overflow-x-hidden w-full max-w-full" style={{display:newsView?'none':undefined}}>
  <Cover title="A 股盘后复盘" description="从市场环境和板块强弱，追踪领涨个股的披露与报道。" actions={[{label:'查看市场环境',href:'#overview'},{label:'定位领涨个股',href:'#gainers'}]}/>
  <section id="overview" className="chapter-block"><Chapter title="市场环境" copy={['先看五项指数与市场广度，','再核对涨跌停、炸板和连板高度。']} aside={<span className="phase-note">{historical?'历史复盘':phases[status?.phase||'']||'连接本地服务'} · {data?.meta.trade_date||date||'日期待定'}</span>}/>

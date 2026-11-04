@@ -1,0 +1,50 @@
+.backlog-entry{margin-right:8px}
+
+/* 添加区：独立卡片，带浅绿底 */
+.bl-add{display:flex;flex-direction:column;gap:10px;padding:14px;margin-bottom:20px;
+  background:linear-gradient(135deg,#f2f7f0,#eef4ec);border:1px solid #dbe6d8;border-radius:12px}
+.bl-add textarea{resize:none}
+
+.bl-group{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:#58675d;font-weight:600}
+.bl-dot{width:8px;height:8px;border-radius:50%}
+.bl-dot.open{background:#d08a1d;box-shadow:0 0 0 3px rgba(208,138,29,.18)}
+.bl-dot.done{background:#5f8a68;box-shadow:0 0 0 3px rgba(95,138,104,.16)}
+
+.bl-list{list-style:none;margin:0 0 24px;padding:0;display:flex;flex-direction:column;gap:12px}
+
+/* 每张事项卡：白底 + 左侧彩色主线 + 顶部浅色晕染 */
+.bl-card{position:relative;padding:14px 16px 12px;border:1px solid #e4e7dd;border-radius:12px;
+  background:#fffef9;box-shadow:0 1px 3px rgba(31,45,39,.05);overflow:hidden;cursor:pointer;
+  transition:box-shadow .18s ease,transform .18s ease}
+.bl-card:hover{box-shadow:0 4px 14px rgba(31,45,39,.1);transform:translateY(-1px)}
+.bl-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac)}
+.bl-card::after{content:'';position:absolute;top:0;left:4px;right:0;height:44px;pointer-events:none;
+  background:linear-gradient(180deg,var(--tint),rgba(255,254,249,0))}
+
+.bl-card-head{position:relative;display:flex;align-items:center;gap:9px;z-index:1}
+.bl-card-mark{flex:none;width:10px;height:10px;border-radius:3px;transform:rotate(45deg);
+  background:var(--ac);box-shadow:0 0 0 3px var(--soft)}
+.bl-card-title{font-size:14px;font-weight:600;color:#1f2d27;line-height:1.45}
+
+.bl-card-detail{position:relative;z-index:1;margin:8px 0 0 19px;font-size:12.5px;line-height:1.65;
+  color:#5b655c;white-space:pre-wrap}
+
+.bl-card-foot{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;
+  margin-top:12px;padding-top:10px;border-top:1px dashed var(--soft,#e8eae2)}
+.bl-card-foot small{color:#989b93;font-size:12px}
+
+/* 已完成卡：灰调、无彩条、标题划线 */
+.bl-card.done{background:#f7f7f3;border-color:#e8eae2;box-shadow:none}
+.bl-card.done::before,.bl-card.done::after{display:none}
+.bl-card.done .bl-card-title{color:#8b8d87;text-decoration:line-through;font-weight:500}
+.bl-card.done .bl-card-detail{color:#a3a69e}
+.bl-card-check{flex:none;width:16px;height:16px;border-radius:50%;background:#7fa088;position:relative}
+.bl-card-check::after{content:'';position:absolute;left:4.5px;top:4px;width:4px;height:7px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg)}
+
+.bl-empty{color:#8b8d87;font-size:13px;margin:4px 0 12px}
+
+/* 编辑弹窗 */
+.bl-edit{display:flex;flex-direction:column;gap:8px;padding-top:6px}
+.bl-edit label{font-size:12px;font-weight:600;color:#58675d;margin-top:4px}
+.bl-edit .bl-delete{align-self:flex-start;margin-top:10px}
