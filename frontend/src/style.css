@@ -17,6 +17,9 @@
 .sentiment-hint{flex:none;font-size:12px;color:#a3a69e;white-space:nowrap}
 .sentiment-curve{margin-top:14px}
 .sentiment-curve h3 em{margin-left:6px}
+.metric.clickable{cursor:pointer;border-radius:6px;transition:background .15s}
+.metric.clickable:hover{background:#f3f5ee}
+.metric-hint{font-style:normal;font-size:10px;color:#a3a69e;margin-left:6px}
 .sentiment-tag{font-style:normal;font-size:10px;color:#8b8d87;border:1px solid #d8dcd2;border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:2px}
 .sentiment-track{position:relative;height:10px;border-radius:6px;margin:8px 0 4px;
   background:linear-gradient(90deg,#68a994 0%,#a9bd6a 35%,#e8d573 55%,#dfa05a 75%,#c8544a 100%)}

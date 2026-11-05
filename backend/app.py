@@ -89,6 +89,11 @@ def create_app(store=None, collect=True):
         from .sentiment import history
         return {'rows':history(store,limit),'note':'自研近似算法（参考开盘啦五维度），非开盘啦官方数值'}
 
+    @app.get('/api/boards-history')
+    def boards_history(limit:int=Query(60,ge=1,le=250)):
+        from .boards import history
+        return {'rows':history(store,limit),'note':'每日涨停池最高/次高/第三连板层级及股票名单'}
+
     @app.get('/api/sectors')
     def sectors(kind:Literal['industry','concept']='industry',date:str|None=None,mode:Literal['close']='close',revision:int|None=None,
                 concept_source:Literal['ths','eastmoney']='ths'):
