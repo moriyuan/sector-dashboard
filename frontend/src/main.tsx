@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client';
 import * as echarts from 'echarts/core';
 import type {EChartsOption} from 'echarts';
 import {BarChart,HeatmapChart,LineChart,TreemapChart} from 'echarts/charts';
-import {GridComponent,TooltipComponent,VisualMapContinuousComponent} from 'echarts/components';
+import {GridComponent,TooltipComponent,VisualMapContinuousComponent,DataZoomInsideComponent,DataZoomSliderComponent} from 'echarts/components';
 import {CanvasRenderer} from 'echarts/renderers';
 import {Button,Input,Popover,Segmented,Select} from 'antd';
 import {ArchivePicker,DeskProvider,DetailDrawer} from './DeskUI';
@@ -18,7 +18,7 @@ import {LhbDrawer,type StockPick} from './Lhb';
 import type {Opening} from './GainerNews';
 import './research.css';
 
-echarts.use([BarChart,HeatmapChart,LineChart,TreemapChart,GridComponent,TooltipComponent,VisualMapContinuousComponent,CanvasRenderer]);
+echarts.use([BarChart,HeatmapChart,LineChart,TreemapChart,GridComponent,TooltipComponent,VisualMapContinuousComponent,DataZoomInsideComponent,DataZoomSliderComponent,CanvasRenderer]);
 
 type Nullable = number | null | undefined;
 type Meta = {trade_date:string;mode:string;source_time:string|null;collected_at:string|null;revision:number|null;rule_version:string;status:string;coverage:number|null;ingestion_method?:string;source?:string};
@@ -113,7 +113,7 @@ function App(){
    }).catch(()=>{if(!controller.signal.aborted)setDateHint('日期未能读取');});
    return()=>controller.abort();
  },[refresh]);
- useEffect(()=>{const controller=new AbortController();setLoading(true);const qs=new URLSearchParams({kind,mode,concept_source:conceptSource,...(date?{date}:{})});Promise.all([get<Listing>(`api/sectors?${qs}`,controller.signal),get<Market>(`api/market?${qs}`,controller.signal),get<Status>('api/status',controller.signal),get<{rows:{date:string;score:number}[]}>('api/sentiment',controller.signal)]).then(([d,m,s,c])=>{if(controller.signal.aborted)return;setData(d);setMarket(m);setStatus(s);setSentiCurve(c.rows||[]);setError('');}).catch(e=>{if(e.name!=='AbortError'){setError('本地服务暂不可用，请检查启动终端。');setData(null);setMarket(null);}}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();},[kind,conceptSource,mode,date,refresh]);
+ useEffect(()=>{const controller=new AbortController();setLoading(true);const qs=new URLSearchParams({kind,mode,concept_source:conceptSource,...(date?{date}:{})});Promise.all([get<Listing>(`api/sectors?${qs}`,controller.signal),get<Market>(`api/market?${qs}`,controller.signal),get<Status>('api/status',controller.signal),get<{rows:{date:string;score:number}[]}>('api/sentiment?limit=500',controller.signal)]).then(([d,m,s,c])=>{if(controller.signal.aborted)return;setData(d);setMarket(m);setStatus(s);setSentiCurve(c.rows||[]);setError('');}).catch(e=>{if(e.name!=='AbortError'){setError('本地服务暂不可用，请检查启动终端。');setData(null);setMarket(null);}}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();},[kind,conceptSource,mode,date,refresh]);
  useEffect(()=>{if(!selected){setDetail(null);return;}const controller=new AbortController();setDetail(null);setDetailError('');const qs=new URLSearchParams({kind,mode,concept_source:conceptSource,...(date?{date}:{}),...((detailRevision??data?.meta.revision)?{revision:String(detailRevision??data?.meta.revision)}:{})});get<Detail>(`api/sectors/${selected}?${qs}`,controller.signal).then(setDetail).catch(e=>{if(e.name!=='AbortError')setDetailError('所选日期没有该板块的完整详情。');});return()=>controller.abort();},[selected,kind,conceptSource,mode,date,data?.meta.revision,detailRevision]);
  const rows=useMemo(()=>data?.rows.filter(r=>r.name.includes(query)||r.code.toLowerCase().includes(query.toLowerCase()))||[],[data,query]);
  const filtered=useMemo(()=>[...rows].sort((a,b)=>{const field=sort as keyof Sector;const av=a[field] as Nullable;const bv=b[field] as Nullable;return av==null?bv==null?0:1:bv==null?-1:bv-av;}),[rows,sort]);
@@ -158,11 +158,18 @@ function App(){
  <div className="metrics"><div className="metric wide"><span>市场成交额</span><strong>{amt(stats?.amount)}</strong><small>沪深 A 股 · 含 ST · 有效报价</small></div><div className="metric wide"><span>上涨 / 下跌</span><strong><b className="up">{fmt(stats?.up,0)}</b><em>/</em><b className="down">{fmt(stats?.down,0)}</b></strong><div className="breadth-track"><i style={{width:`${stats?.up_ratio??0}%`}}/></div><small>平盘 {fmt(stats?.flat,0)} · ST 涨 {fmt(stats?.st.up,0)} / 跌 {fmt(stats?.st.down,0)}</small></div><div className="metric"><span>{fullLimits?'涨停 / 跌停':'池中涨停 / 跌停'}</span><strong><b className="up">{fmt(fullLimits?stats?.quote_limit_up:emotion?.limit_up,0)}</b><em>/</em><b className="down">{fmt(fullLimits?stats?.quote_limit_down:emotion?.limit_down,0)}</b></strong><small>{fullLimits?'源涨跌停价判定 · 非ST':'供应商池覆盖 · 非ST'}</small></div><div className="metric"><span>炸板率</span><strong>{emotion?.broken_ratio==null?'—':`${fmt(emotion.broken_ratio,1)}%`}</strong><small>东财池：未封住 / 当日曾涨停</small></div><div className="metric"><span>最高连板</span><strong>{fmt(emotion?.max_boards,0)}<small>板</small></strong><small>东财池 · 非ST，科创板可能未收录</small></div></div>
  <div className="market-bento grid-flow-dense"><section className="breadth-card"><h3>涨跌分布</h3> {stats?<Chart height={150} option={{grid:{left:40,right:20,top:18,bottom:30},tooltip:{trigger:'axis'},xAxis:{type:'category',data:['<-7%','-7~-3%','-3~0%','平盘','0~3%','3~7%','≥7%']},yAxis:{type:'value',minInterval:1},series:[{type:'bar',label:{show:true,position:'top',fontSize:10,color:'#58675d'},data:stats.distribution.map((v,i)=>({value:v,itemStyle:{color:i<3?'#6da58f':i>3?'#ce887e':'#b9bcb3'}}))}]}}/>:<Empty title="暂无涨跌分布" text="等待该日市场广度快照。"/>}</section><NotesDeck notes={notes}/></div>
  {showSenti&&<section id="sentiment" className="breadth-card sentiment-curve"><h3>综合强度曲线<em className="sentiment-tag">自研</em></h3>
- {sentiCurve.length>1?<Chart height={200} option={{
-   grid:{left:36,right:16,top:20,bottom:26},
+ {sentiCurve.length>1?<Chart height={230} option={{
+   grid:{left:36,right:16,top:20,bottom:48},
+   dataZoom:[{type:'inside',startValue:Math.max(0,sentiCurve.length-60),endValue:sentiCurve.length-1,filterMode:'none'},
+     {type:'slider',height:16,bottom:6,startValue:Math.max(0,sentiCurve.length-60),endValue:sentiCurve.length-1,filterMode:'none',
+       borderColor:'transparent',backgroundColor:'rgba(54,88,62,.05)',fillerColor:'rgba(54,88,62,.12)',
+       handleStyle:{color:'#36583e'},moveHandleStyle:{color:'#36583e'},
+       dataBackground:{lineStyle:{color:'#c9cdc2'},areaStyle:{color:'rgba(54,88,62,.08)'}},
+       selectedDataBackground:{lineStyle:{color:'#36583e'},areaStyle:{color:'rgba(54,88,62,.14)'}},
+       textStyle:{fontSize:9,color:'#8b8d87'}}],
    tooltip:{trigger:'axis',formatter:(ps:any)=>{const p=ps[0];return `${sentiCurve[p.dataIndex]?.date}<br/>综合强度 <b>${p.value}</b>`;}},
    xAxis:{type:'category',data:sentiCurve.map(r=>r.date.slice(5)),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8b8d87',fontSize:10}},
-   yAxis:{type:'value',min:0,max:100,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{lineStyle:{color:'#eef0e8'}}},
+   yAxis:{type:'value',min:0,max:100,interval:10,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{lineStyle:{color:'#eef0e8'}}},
    series:[{type:'line',smooth:true,symbol:'circle',symbolSize:5,data:sentiCurve.map(r=>({value:r.score,itemStyle:{color:sentimentColor(r.score)}})),
      lineStyle:{width:2,color:'#b0523c'},areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(200,84,74,.22)'},{offset:1,color:'rgba(200,84,74,0)'}]}},
      markLine:{silent:true,symbol:'none',label:{fontSize:10,color:'#a3a69e'},data:[{yAxis:75,lineStyle:{color:'#c8544a',type:'dashed'},label:{formatter:'过热 75'}},{yAxis:25,lineStyle:{color:'#5f8a68',type:'dashed'},label:{formatter:'过冷 25'}}]},

@@ -85,7 +85,7 @@ def create_app(store=None, collect=True):
                 'sentiment':daily(store,date)}
 
     @app.get('/api/sentiment')
-    def sentiment_curve(limit:int=Query(60,ge=1,le=250)):
+    def sentiment_curve(limit:int=Query(60,ge=1,le=500)):
         from .sentiment import history
         return {'rows':history(store,limit),'note':'自研近似算法（参考开盘啦五维度），非开盘啦官方数值'}
 
