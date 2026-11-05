@@ -38,7 +38,9 @@ def test_backlog_validation_and_missing(tmp_path):
         assert c.post('/api/backlog', json={'title': ''}).status_code == 422
         assert c.post('/api/backlog', json={'title': '   '}).status_code == 422
         assert c.post('/api/backlog', json={'title': 'x' * 41}).status_code == 422
-        assert c.post('/api/backlog', json={'title': 'ok', 'detail': 'x' * 301}).status_code == 422
+        assert c.post('/api/backlog', json={'title': 'ok', 'detail': 'x' * 3001}).status_code == 422
+        ok = c.post('/api/backlog', json={'title': 'ok', 'detail': 'x' * 3000})
+        assert ok.status_code == 200 and len(ok.json()['detail']) == 3000  # 3000 字边界可用
         assert c.post('/api/backlog', json={}).status_code == 422
         assert c.post('/api/backlog/999/done').status_code == 404
 
@@ -63,7 +65,7 @@ def test_backlog_edit_and_delete(tmp_path):
         assert c.patch(f"/api/backlog/{item['id']}", json={}).status_code == 422  # 空修改
         assert c.patch(f"/api/backlog/{item['id']}", json={'title': ''}).status_code == 422
         assert c.patch(f"/api/backlog/{item['id']}", json={'title': 'x' * 41}).status_code == 422
-        assert c.patch(f"/api/backlog/{item['id']}", json={'detail': 'x' * 301}).status_code == 422
+        assert c.patch(f"/api/backlog/{item['id']}", json={'detail': 'x' * 3001}).status_code == 422
         assert c.patch('/api/backlog/999', json={'title': 'x'}).status_code == 404
         done = c.post(f"/api/backlog/{item['id']}/done").json()
         edited = c.patch(f"/api/backlog/{item['id']}", json={'detail': '完成后也能改'}).json()

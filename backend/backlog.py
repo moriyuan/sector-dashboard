@@ -4,7 +4,7 @@ from fastapi import APIRouter, Body, HTTPException
 from .store import now_iso
 
 MAX_TITLE = 40
-MAX_DETAIL = 300
+MAX_DETAIL = 3000
 
 _SCHEMA = '''CREATE TABLE IF NOT EXISTS backlog_items(
     id INTEGER PRIMARY KEY, title TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',

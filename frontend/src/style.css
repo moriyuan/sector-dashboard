@@ -2,3 +2,34 @@
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 .gainers{margin-bottom:23px;scroll-margin-top:20px}.gainer-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.gainer-controls label{display:flex;align-items:center;gap:5px;font-size:11px}.gainer-controls select{max-width:220px}.gainer-controls>span{margin-left:auto;font-size:11px}.gainers .table-wrap{margin-top:16px;max-height:540px}.gainers .board-links{text-align:left;white-space:normal;min-width:90px}.gainers .concepts-cell{min-width:220px;max-width:310px}.sector-chip{font-size:10px;padding:3px 6px;margin:2px;border-color:#e3e8dc;background:#f5f7f1;color:#617158}.gainers details{font-size:10px;color:#879079;margin:4px 2px}.gainers summary{cursor:pointer}.gainer-rank{color:#a6af99;display:inline-block;width:25px;font-size:10px}.gainers tbody tr{cursor:default}
+
+/* 综合强度通栏（自研情绪指标） */
+.sentiment-strip{display:flex;align-items:center;gap:14px;margin:10px 0 14px;padding:12px 18px;
+  background:#fffef9;border:1px solid #e4e7dd;border-radius:12px;cursor:pointer;
+  transition:box-shadow .18s ease}
+.sentiment-strip:hover{box-shadow:0 3px 12px rgba(31,45,39,.08)}
+.sentiment-strip .sentiment-label{flex:none;font-size:13px;color:#58675d;font-weight:600}
+.sentiment-strip strong{flex:none;font-size:24px;line-height:1;min-width:64px}
+.sentiment-strip .sentiment-track{flex:1;margin:0}
+.sentiment-strip small{flex:none;color:#8b8d87}
+.sentiment-more{flex:none;font-size:12px;color:#4c5fae;white-space:nowrap}
+.sentiment-more:hover{text-decoration:underline}
+.sentiment-hint{flex:none;font-size:12px;color:#a3a69e;white-space:nowrap}
+.sentiment-curve{margin-top:14px}
+.sentiment-curve h3 em{margin-left:6px}
+.sentiment-tag{font-style:normal;font-size:10px;color:#8b8d87;border:1px solid #d8dcd2;border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:2px}
+.sentiment-track{position:relative;height:10px;border-radius:6px;margin:8px 0 4px;
+  background:linear-gradient(90deg,#68a994 0%,#a9bd6a 35%,#e8d573 55%,#dfa05a 75%,#c8544a 100%)}
+.sentiment-track b{position:absolute;top:-3px;width:3px;height:16px;border-radius:2px;background:#1f2d27;
+  transform:translateX(-50%);box-shadow:0 0 0 2px #fffef9}
+
+/* 悬浮明细 */
+.sentiment-detail{width:300px;display:flex;flex-direction:column;gap:8px}
+.sentiment-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.sentiment-name{flex:none;width:88px;color:#4d524b}
+.sentiment-name em{font-style:normal;color:#a3a69e;font-size:10px;margin-left:3px}
+.sentiment-mini{flex:1;height:6px;border-radius:4px;background:#eef0e8;overflow:hidden}
+.sentiment-mini i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#7fa088,#5f8a68)}
+.sentiment-row b{flex:none;width:34px;text-align:right;color:#1f2d27}
+.sentiment-missing{margin:4px 0 0;font-size:11px;color:#a3a69e}
+.sentiment-note{margin:2px 0 0;font-size:11px;color:#8b8d87;border-top:1px dashed #e4e7dd;padding-top:6px}

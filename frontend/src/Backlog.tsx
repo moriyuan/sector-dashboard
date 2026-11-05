@@ -70,7 +70,7 @@ export default function Backlog(){
     <Input placeholder="事项主题，例如：板块拥挤度指标" value={title} maxLength={40} showCount
       onChange={e=>setTitle(e.target.value)} onPressEnter={add} disabled={busy}/>
     <Input.TextArea placeholder="补充描述：要做什么、为什么做、做到什么程度（可选）" value={detail}
-      maxLength={300} showCount autoSize={{minRows:2,maxRows:4}}
+      maxLength={3000} showCount autoSize={{minRows:2,maxRows:6}}
       onChange={e=>setDetail(e.target.value)} disabled={busy}/>
     <Button type="primary" block onClick={add} loading={busy} disabled={!title.trim()}>添加事项</Button>
    </div>
@@ -113,7 +113,7 @@ export default function Backlog(){
     <label>主题</label>
     <Input value={editTitle} maxLength={40} showCount onChange={e=>setEditTitle(e.target.value)}/>
     <label>描述</label>
-    <Input.TextArea value={editDetail} maxLength={300} showCount autoSize={{minRows:3,maxRows:6}}
+    <Input.TextArea value={editDetail} maxLength={3000} showCount autoSize={{minRows:3,maxRows:8}}
       placeholder="补充描述（可选）" onChange={e=>setEditDetail(e.target.value)}/>
     <Popconfirm title="删除该事项？" description="删除后不可恢复。" okText="删除" cancelText="再想想"
       okButtonProps={{danger:true,loading:busy}} onConfirm={removeEdit}>

@@ -78,9 +78,16 @@ def create_app(store=None, collect=True):
         snap = store.snapshot('market',date,mode)
         pools = store.snapshot('pools',date,mode)
         indices = store.snapshot('indices',date,mode)
+        from .sentiment import daily
         return {'meta':metadata(snap,date,mode),'stats':snap['payload']['stats'] if snap else None,'indices':indices['payload']['rows'] if indices else [],
                 'indices_meta':metadata(indices,date,mode),
-                'emotion':pools['payload']['stats'] if pools else None,'emotion_meta':metadata(pools,date,mode)}
+                'emotion':pools['payload']['stats'] if pools else None,'emotion_meta':metadata(pools,date,mode),
+                'sentiment':daily(store,date)}
+
+    @app.get('/api/sentiment')
+    def sentiment_curve(limit:int=Query(60,ge=1,le=250)):
+        from .sentiment import history
+        return {'rows':history(store,limit),'note':'自研近似算法（参考开盘啦五维度），非开盘啦官方数值'}
 
     @app.get('/api/sectors')
     def sectors(kind:Literal['industry','concept']='industry',date:str|None=None,mode:Literal['close']='close',revision:int|None=None,
