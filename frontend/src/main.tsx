@@ -100,10 +100,9 @@ function App(){
  const [newsView,setNewsView]=useState(location.hash==='#news');
  useEffect(()=>{const onHash=()=>setNewsView(location.hash==='#news');window.addEventListener('hashchange',onHash);return()=>window.removeEventListener('hashchange',onHash);},[]);
  const [kind,setKind]=useState('industry');const [conceptSource,setConceptSource]=useState('ths');const mode='close';const [date,setDate]=useState('');const [dates,setDates]=useState<Dates>({snapshots:[],history_dates:[]});
- const [data,setData]=useState<Listing|null>(null);const [market,setMarket]=useState<Market|null>(null);const [status,setStatus]=useState<Status|null>(null);const [error,setError]=useState('');const [loading,setLoading]=useState(true);const [refresh,setRefresh]=useState(0);const [sentiCurve,setSentiCurve]=useState<{date:string;score:number}[]>([]);const [showSenti,setShowSenti]=useState(false);
- const toggleSenti=()=>{const nv=!showSenti;setShowSenti(nv);if(nv)setTimeout(()=>document.getElementById('sentiment')?.scrollIntoView({behavior:'smooth',block:'center'}),80);};
- const [boardsCurve,setBoardsCurve]=useState<{date:string;tiers:{boards:number;names:string[]}[]}[]>([]);const [showBoards,setShowBoards]=useState(false);
- const toggleBoards=()=>{const nv=!showBoards;setShowBoards(nv);if(nv)setTimeout(()=>document.getElementById('boards')?.scrollIntoView({behavior:'smooth',block:'center'}),80);};
+ const [data,setData]=useState<Listing|null>(null);const [market,setMarket]=useState<Market|null>(null);const [status,setStatus]=useState<Status|null>(null);const [error,setError]=useState('');const [loading,setLoading]=useState(true);const [refresh,setRefresh]=useState(0);const [sentiCurve,setSentiCurve]=useState<{date:string;score:number}[]>([]);
+ const [boardsCurve,setBoardsCurve]=useState<{date:string;tiers:{boards:number;names:string[]}[]}[]>([]);const [showCurve,setShowCurve]=useState(false);
+ const toggleCurve=()=>{const nv=!showCurve;setShowCurve(nv);if(nv)setTimeout(()=>document.getElementById('curve')?.scrollIntoView({behavior:'smooth',block:'center'}),80);};
  const [query,setQuery]=useState('');const [period,setPeriod]=useState('1');const [ranking,setRanking]=useState('hot');const [sort,setSort]=useState('heat');const [selected,setSelectedRaw]=useState<string|null>(null);const [detailRevision,setDetailRevision]=useState<number|null>(null);const setSelected=(code:string|null)=>{setDetailRevision(null);setSelectedRaw(code);};const [detail,setDetail]=useState<Detail|null>(null);const [detailError,setDetailError]=useState('');const [stockSort,setStockSort]=useState('change');const [showHealth,setShowHealth]=useState(false);const [showRules,setShowRules]=useState(false);
  const [dateHint,setDateHint]=useState('读取日期…');
  useEffect(()=>{
@@ -143,6 +142,9 @@ function App(){
    {title:kind==='industry'?'行业热点':'概念热点',value:hot[0]?.name??'尚无已核实热点',description:hot[0]?'当前筛选下热点强度最高，点击查看同期板块。':'查看评分覆盖和板块分布。',href:'#sectors'},
    {title:'成交额聚焦',value:amountLeaders[0]?.name??'成交占比待核验',description:amountLeaders[0]?'当前筛选下成交额占比居首，可在资金面板核对。':'有效样本不足时留空。',href:'#turnover'}
  ];
+ const sentiByDate:Record<string,number>=Object.fromEntries(sentiCurve.map(r=>[r.date,r.score] as [string,number]));
+ const boardsByDate:Record<string,{boards:number;names:string[]}>=Object.fromEntries(boardsCurve.map(r=>[r.date,r.tiers[0]] as [string,{boards:number;names:string[]}]));
+ const curveDays=[...new Set([...sentiCurve.map(r=>r.date),...boardsCurve.map(r=>r.date)])].sort();
  return <><DeskNav news={newsView} onNews={openNews}>{!newsView?<><div className="nav-date"><span>复盘日</span>
    <ArchivePicker label="交易日期" value={date} dates={options} emptyText={dateHint} snapshots={dates.snapshots.map(d=>d.trade_date)}
      shortcut={{label:dates.snapshots.length?'最新快照':'最新指数日',value:dates.snapshots[0]?.trade_date||options[0]||''}}
@@ -155,50 +157,37 @@ function App(){
    const index=market?.indices.find(i=>i.code===code);
    return <div key={code}><span>{name}</span><strong>{fmt(index?.price??null)}</strong><b className={color(index?.change??null)}>{index?pct(index.change):market?'未存档':'等待源数据'}</b></div>;
  })}</div>
- <SentimentStrip data={market?.sentiment??null} open={showSenti} onToggle={toggleSenti}/>
+ <SentimentStrip data={market?.sentiment??null} open={showCurve} onToggle={toggleCurve}/>
 
- <div className="metrics"><div className="metric wide"><span>市场成交额</span><strong>{amt(stats?.amount)}</strong><small>沪深 A 股 · 含 ST · 有效报价</small></div><div className="metric wide"><span>上涨 / 下跌</span><strong><b className="up">{fmt(stats?.up,0)}</b><em>/</em><b className="down">{fmt(stats?.down,0)}</b></strong><div className="breadth-track"><i style={{width:`${stats?.up_ratio??0}%`}}/></div><small>平盘 {fmt(stats?.flat,0)} · ST 涨 {fmt(stats?.st.up,0)} / 跌 {fmt(stats?.st.down,0)}</small></div><div className="metric"><span>{fullLimits?'涨停 / 跌停':'池中涨停 / 跌停'}</span><strong><b className="up">{fmt(fullLimits?stats?.quote_limit_up:emotion?.limit_up,0)}</b><em>/</em><b className="down">{fmt(fullLimits?stats?.quote_limit_down:emotion?.limit_down,0)}</b></strong><small>{fullLimits?'源涨跌停价判定 · 非ST':'供应商池覆盖 · 非ST'}</small></div><div className="metric"><span>炸板率</span><strong>{emotion?.broken_ratio==null?'—':`${fmt(emotion.broken_ratio,1)}%`}</strong><small>东财池：未封住 / 当日曾涨停</small></div><div className="metric clickable" onClick={toggleBoards} title={showBoards?'收起最高板走势':'点击查看最高板走势'}><span>最高连板<em className="metric-hint">{showBoards?'收起 ↑':'走势 ↓'}</em></span><strong>{fmt(emotion?.max_boards,0)}<small>板</small></strong><small>东财池 · 非ST，科创板可能未收录</small></div></div>
- {showBoards&&<section id="boards" className="breadth-card sentiment-curve"><h3>最高板走势<em className="sentiment-tag">涨停池</em></h3>
- {boardsCurve.length>1?<Chart height={300} option={{
-   grid:{left:36,right:16,top:30,bottom:48},
-   dataZoom:[{type:'inside',startValue:Math.max(0,boardsCurve.length-60),endValue:boardsCurve.length-1,filterMode:'none'},
-     {type:'slider',height:16,bottom:6,startValue:Math.max(0,boardsCurve.length-60),endValue:boardsCurve.length-1,filterMode:'none',
+ <div className="metrics"><div className="metric wide"><span>市场成交额</span><strong>{amt(stats?.amount)}</strong><small>沪深 A 股 · 含 ST · 有效报价</small></div><div className="metric wide"><span>上涨 / 下跌</span><strong><b className="up">{fmt(stats?.up,0)}</b><em>/</em><b className="down">{fmt(stats?.down,0)}</b></strong><div className="breadth-track"><i style={{width:`${stats?.up_ratio??0}%`}}/></div><small>平盘 {fmt(stats?.flat,0)} · ST 涨 {fmt(stats?.st.up,0)} / 跌 {fmt(stats?.st.down,0)}</small></div><div className="metric"><span>{fullLimits?'涨停 / 跌停':'池中涨停 / 跌停'}</span><strong><b className="up">{fmt(fullLimits?stats?.quote_limit_up:emotion?.limit_up,0)}</b><em>/</em><b className="down">{fmt(fullLimits?stats?.quote_limit_down:emotion?.limit_down,0)}</b></strong><small>{fullLimits?'源涨跌停价判定 · 非ST':'供应商池覆盖 · 非ST'}</small></div><div className="metric"><span>炸板率</span><strong>{emotion?.broken_ratio==null?'—':`${fmt(emotion.broken_ratio,1)}%`}</strong><small>东财池：未封住 / 当日曾涨停</small></div><div className="metric clickable" onClick={toggleCurve} title={showCurve?'收起走势曲线':'点击查看走势'}><span>最高连板<em className="metric-hint">{showCurve?'收起 ↑':'走势 ↓'}</em></span><strong>{fmt(emotion?.max_boards,0)}<small>板</small></strong><small>东财池 · 非ST，科创板可能未收录</small></div></div>
+ {showCurve&&<section id="curve" className="breadth-card sentiment-curve"><h3>综合强度 × 最高板<em className="sentiment-tag">自研 + 涨停池</em></h3>
+ {sentiCurve.length>1||boardsCurve.length>1?<Chart height={300} option={{
+   grid:{left:36,right:36,top:32,bottom:48},
+   legend:{top:2,right:8,itemWidth:14,itemHeight:8,textStyle:{fontSize:10,color:'#58675d'},data:['综合强度','最高板']},
+   dataZoom:[{type:'inside',startValue:Math.max(0,curveDays.length-60),endValue:curveDays.length-1,filterMode:'none'},
+     {type:'slider',height:16,bottom:6,startValue:Math.max(0,curveDays.length-60),endValue:curveDays.length-1,filterMode:'none',
        borderColor:'transparent',backgroundColor:'rgba(54,88,62,.05)',fillerColor:'rgba(54,88,62,.12)',
        handleStyle:{color:'#36583e'},moveHandleStyle:{color:'#36583e'},
        dataBackground:{lineStyle:{color:'#c9cdc2'},areaStyle:{color:'rgba(54,88,62,.08)'}},
        selectedDataBackground:{lineStyle:{color:'#36583e'},areaStyle:{color:'rgba(54,88,62,.14)'}},
        textStyle:{fontSize:9,color:'#8b8d87'}}],
-   tooltip:{trigger:'axis',formatter:(ps:any)=>ps.filter((p:any)=>p.data).map((p:any)=>{const t=boardsCurve[p.dataIndex]?.tiers[p.seriesIndex];return t?`${t.boards}板：${t.names.join('、')}`:'';}).filter(Boolean).join('<br/>')},
-   xAxis:{type:'category',data:boardsCurve.map(r=>r.date.slice(5)),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8b8d87',fontSize:10}},
-   yAxis:{type:'value',min:0,minInterval:1,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{lineStyle:{color:'#eef0e8'}}},
-   series:[0].map(tier=>({type:'line',smooth:true,symbol:'circle',symbolSize:6,connectNulls:false,
-     lineStyle:{width:2,color:'#c8544a'},
-     itemStyle:{color:'#c8544a'},
-     label:{show:true,position:'top',fontSize:9,color:'#c8544a',lineHeight:12,
-       formatter:(p:any)=>p.data?.names?p.data.names.map((n:string)=>`${n}${p.data.boards}`).join('\n'):''},
-     data:boardsCurve.map(r=>{const t=r.tiers[tier];return t?{value:t.boards,boards:t.boards,names:t.names}:null;})
-   }))}}/>:<Empty title="暂无最高板数据" text="等待涨停池快照积累（池数据仅保留近期，历史随采集逐日增长）。"/>}
- <p className="footnote">每日涨停池最高连板 · 并列股票全部列出 · 池历史受供应商保留期限制，自系统上线起逐日积累</p></section>}
- <div className="market-bento grid-flow-dense"><section className="breadth-card"><h3>涨跌分布</h3> {stats?<Chart height={150} option={{grid:{left:40,right:20,top:18,bottom:30},tooltip:{trigger:'axis'},xAxis:{type:'category',data:['<-7%','-7~-3%','-3~0%','平盘','0~3%','3~7%','≥7%']},yAxis:{type:'value',minInterval:1},series:[{type:'bar',label:{show:true,position:'top',fontSize:10,color:'#58675d'},data:stats.distribution.map((v,i)=>({value:v,itemStyle:{color:i<3?'#6da58f':i>3?'#ce887e':'#b9bcb3'}}))}]}}/>:<Empty title="暂无涨跌分布" text="等待该日市场广度快照。"/>}</section><NotesDeck notes={notes}/></div>
- {showSenti&&<section id="sentiment" className="breadth-card sentiment-curve"><h3>综合强度曲线<em className="sentiment-tag">自研</em></h3>
- {sentiCurve.length>1?<Chart height={230} option={{
-   grid:{left:36,right:16,top:20,bottom:48},
-   dataZoom:[{type:'inside',startValue:Math.max(0,sentiCurve.length-60),endValue:sentiCurve.length-1,filterMode:'none'},
-     {type:'slider',height:16,bottom:6,startValue:Math.max(0,sentiCurve.length-60),endValue:sentiCurve.length-1,filterMode:'none',
-       borderColor:'transparent',backgroundColor:'rgba(54,88,62,.05)',fillerColor:'rgba(54,88,62,.12)',
-       handleStyle:{color:'#36583e'},moveHandleStyle:{color:'#36583e'},
-       dataBackground:{lineStyle:{color:'#c9cdc2'},areaStyle:{color:'rgba(54,88,62,.08)'}},
-       selectedDataBackground:{lineStyle:{color:'#36583e'},areaStyle:{color:'rgba(54,88,62,.14)'}},
-       textStyle:{fontSize:9,color:'#8b8d87'}}],
-   tooltip:{trigger:'axis',formatter:(ps:any)=>{const p=ps[0];return `${sentiCurve[p.dataIndex]?.date}<br/>综合强度 <b>${p.value}</b>`;}},
-   xAxis:{type:'category',data:sentiCurve.map(r=>r.date.slice(5)),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8b8d87',fontSize:10}},
-   yAxis:{type:'value',min:0,max:100,interval:10,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{lineStyle:{color:'#eef0e8'}}},
-   series:[{type:'line',smooth:true,symbol:'circle',symbolSize:5,data:sentiCurve.map(r=>({value:r.score,itemStyle:{color:sentimentColor(r.score)}})),
+   tooltip:{trigger:'axis',formatter:(ps:any)=>{const day=curveDays[ps[0]?.dataIndex]||'';const lines=ps.filter((p:any)=>p.data&&p.value!=null).map((p:any)=>p.seriesName==='最高板'?`最高板 <b>${p.data.boards}板</b>：${p.data.names.join('、')}`:`综合强度 <b>${p.value}</b>`);return [day,...lines].join('<br/>');}},
+   xAxis:{type:'category',data:curveDays.map(d=>d.slice(5)),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8b8d87',fontSize:10}},
+   yAxis:[{type:'value',min:0,max:100,interval:10,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{lineStyle:{color:'#eef0e8'}}},
+     {type:'value',min:0,minInterval:1,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{show:false}}],
+   series:[{name:'综合强度',type:'line',smooth:true,symbol:'circle',symbolSize:5,connectNulls:false,
+     data:curveDays.map(d=>d in sentiByDate?{value:sentiByDate[d],itemStyle:{color:sentimentColor(sentiByDate[d])}}:null),
      lineStyle:{width:2,color:'#b0523c'},areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(200,84,74,.22)'},{offset:1,color:'rgba(200,84,74,0)'}]}},
      markLine:{silent:true,symbol:'none',label:{fontSize:10,color:'#a3a69e'},data:[{yAxis:75,lineStyle:{color:'#c8544a',type:'dashed'},label:{formatter:'过热 75'}},{yAxis:25,lineStyle:{color:'#5f8a68',type:'dashed'},label:{formatter:'过冷 25'}}]},
-     ...(date&&sentiCurve.some(r=>r.date===date)?{markPoint:{symbol:'pin',symbolSize:34,itemStyle:{color:'#36583e'},label:{fontSize:9,color:'#fff'},data:[{name:'当前',coord:[sentiCurve.findIndex(r=>r.date===date),sentiCurve.find(r=>r.date===date)!.score]}]}}:{})
-   }]}}/>:<Empty title="暂无强度曲线" text="等待连续交易日的市场快照。"/>}
- <p className="footnote">自研近似算法（参考开盘啦五维度），非开盘啦官方数值 · 每日盘后随市场快照落库</p></section>}
+     ...(date&&curveDays.includes(date)?{markPoint:{symbol:'pin',symbolSize:34,itemStyle:{color:'#36583e'},label:{fontSize:9,color:'#fff'},data:[{name:'当前',coord:[curveDays.indexOf(date),sentiByDate[date]]}]}}:{})
+   },{name:'最高板',type:'line',smooth:true,symbol:'circle',symbolSize:6,connectNulls:false,yAxisIndex:1,
+     lineStyle:{width:2,color:'#36583e'},itemStyle:{color:'#36583e'},
+     label:{show:true,position:'top',fontSize:9,color:'#36583e',lineHeight:12,
+       formatter:(p:any)=>p.data?.names?p.data.names.map((n:string)=>`${n}${p.data.boards}`).join('\n'):''},
+     data:curveDays.map(d=>{const t=boardsByDate[d];return t?{value:t.boards,boards:t.boards,names:t.names}:null;})
+   }]}}/>:<Empty title="暂无曲线数据" text="等待连续交易日的市场快照与涨停池积累。"/>}
+ <p className="footnote">自研近似算法（参考开盘啦五维度），非开盘啦官方数值 · 最高板取自每日涨停池，并列股票全部列出 · 池历史自系统上线起逐日积累</p></section>}
+ <div className="market-bento grid-flow-dense"><section className="breadth-card"><h3>涨跌分布</h3> {stats?<Chart height={150} option={{grid:{left:40,right:20,top:18,bottom:30},tooltip:{trigger:'axis'},xAxis:{type:'category',data:['<-7%','-7~-3%','-3~0%','平盘','0~3%','3~7%','≥7%']},yAxis:{type:'value',minInterval:1},series:[{type:'bar',label:{show:true,position:'top',fontSize:10,color:'#58675d'},data:stats.distribution.map((v,i)=>({value:v,itemStyle:{color:i<3?'#6da58f':i>3?'#ce887e':'#b9bcb3'}}))}]}}/>:<Empty title="暂无涨跌分布" text="等待该日市场广度快照。"/>}</section><NotesDeck notes={notes}/></div>
  <p className="footnote">指数 {market?.indices_meta?.source} · {timeText(market?.indices_meta?.source_time)} / 广度 {market?.meta.source} · {timeText(market?.meta.source_time)} · 情绪池源 {timeText(market?.emotion_meta.source_time)} / 采集 {timeText(market?.emotion_meta.collected_at)} · 收盘报价覆盖 {stats?.quote_coverage==null?'未知':`${fmt(stats.quote_coverage*100,1)}%`} · 有效交易占比 {stats?.coverage==null?'未知':`${fmt(stats.coverage*100,1)}%`}</p>
  </section>
  <section id="sectors" className="chapter-block"><Chapter title="板块强弱" copy={['查看成交集中的位置，','用成分广度和历史排名核对热点与退潮。']}/>
