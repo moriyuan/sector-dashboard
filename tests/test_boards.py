@@ -32,7 +32,7 @@ def test_boards_history_tiers_and_filters(tmp_path):
     rows = history(store)
     assert [r['date'] for r in rows] == ['2026-11-03', '2026-11-05']  # 无池日期跳过
     tiers = rows[0]['tiers']
-    assert [t['boards'] for t in tiers] == [6, 5, 3]  # 最高三层降序
+    assert [t['boards'] for t in tiers] == [6]  # 仅最高一层
     assert tiers[0]['names'] == ['乙股份', '甲股']  # 并列多只都列出
     # ST 7 板与北交所 8 板不得进入
     all_names = [n for t in tiers for n in t['names']]

@@ -171,14 +171,14 @@ function App(){
    tooltip:{trigger:'axis',formatter:(ps:any)=>ps.filter((p:any)=>p.data).map((p:any)=>{const t=boardsCurve[p.dataIndex]?.tiers[p.seriesIndex];return t?`${t.boards}板：${t.names.join('、')}`:'';}).filter(Boolean).join('<br/>')},
    xAxis:{type:'category',data:boardsCurve.map(r=>r.date.slice(5)),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8b8d87',fontSize:10}},
    yAxis:{type:'value',min:0,minInterval:1,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{lineStyle:{color:'#eef0e8'}}},
-   series:[0,1,2].map(tier=>({type:'line',smooth:true,symbol:'circle',symbolSize:6,connectNulls:false,
-     lineStyle:{width:2,color:['#c8544a','#d08a1d','#4a7a9a'][tier]},
-     itemStyle:{color:['#c8544a','#d08a1d','#4a7a9a'][tier]},
-     label:{show:true,position:'top',fontSize:9,color:['#c8544a','#d08a1d','#4a7a9a'][tier],lineHeight:12,
+   series:[0].map(tier=>({type:'line',smooth:true,symbol:'circle',symbolSize:6,connectNulls:false,
+     lineStyle:{width:2,color:'#c8544a'},
+     itemStyle:{color:'#c8544a'},
+     label:{show:true,position:'top',fontSize:9,color:'#c8544a',lineHeight:12,
        formatter:(p:any)=>p.data?.names?p.data.names.map((n:string)=>`${n}${p.data.boards}`).join('\n'):''},
      data:boardsCurve.map(r=>{const t=r.tiers[tier];return t?{value:t.boards,boards:t.boards,names:t.names}:null;})
    }))}}/>:<Empty title="暂无最高板数据" text="等待涨停池快照积累（池数据仅保留近期，历史随采集逐日增长）。"/>}
- <p className="footnote">每日涨停池最高/次高/第三连板层级 · 并列股票全部列出 · 池历史受供应商保留期限制，自系统上线起逐日积累</p></section>}
+ <p className="footnote">每日涨停池最高连板 · 并列股票全部列出 · 池历史受供应商保留期限制，自系统上线起逐日积累</p></section>}
  <div className="market-bento grid-flow-dense"><section className="breadth-card"><h3>涨跌分布</h3> {stats?<Chart height={150} option={{grid:{left:40,right:20,top:18,bottom:30},tooltip:{trigger:'axis'},xAxis:{type:'category',data:['<-7%','-7~-3%','-3~0%','平盘','0~3%','3~7%','≥7%']},yAxis:{type:'value',minInterval:1},series:[{type:'bar',label:{show:true,position:'top',fontSize:10,color:'#58675d'},data:stats.distribution.map((v,i)=>({value:v,itemStyle:{color:i<3?'#6da58f':i>3?'#ce887e':'#b9bcb3'}}))}]}}/>:<Empty title="暂无涨跌分布" text="等待该日市场广度快照。"/>}</section><NotesDeck notes={notes}/></div>
  {showSenti&&<section id="sentiment" className="breadth-card sentiment-curve"><h3>综合强度曲线<em className="sentiment-tag">自研</em></h3>
  {sentiCurve.length>1?<Chart height={230} option={{
