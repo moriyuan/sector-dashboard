@@ -36,3 +36,8 @@
 .sentiment-row b{flex:none;width:34px;text-align:right;color:#1f2d27}
 .sentiment-missing{margin:4px 0 0;font-size:11px;color:#a3a69e}
 .sentiment-note{margin:2px 0 0;font-size:11px;color:#8b8d87;border-top:1px dashed #e4e7dd;padding-top:6px}
+.curve-chips{display:flex;gap:8px;margin:-2px 0 8px}
+.curve-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #d8dcd2;background:#fff;border-radius:999px;padding:2px 12px;font-size:11px;color:#3d4a42;cursor:pointer;transition:all .15s;font-family:inherit}
+.curve-chip .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.curve-chip.off{opacity:.42;border-style:dashed}
+.curve-chip:hover{border-color:#36583e}
