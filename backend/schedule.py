@@ -11,6 +11,8 @@ def phase(now: datetime, calendar: list[str]):
     clock = now.astimezone(TZ).strftime('%H:%M')
     if '09:30' <= clock < '11:30' or '13:00' <= clock < '15:00':
         return 'trading'
+    if '12:00' <= clock < '13:00':
+        return 'archive_midday'
     if '11:30' <= clock < '13:00':
         return 'lunch'
     if '15:30' <= clock < '16:30':

@@ -1,0 +1,27 @@
+[Unit]
+Description=A-share daily price/volume factor archive
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=sector-dashboard
+Group=sector-dashboard
+WorkingDirectory=/opt/sector-dashboard/current
+Environment=TZ=Asia/Shanghai
+Environment=PYTHONPATH=/opt/sector-dashboard/quant-worker-libs
+Environment=OPENBLAS_NUM_THREADS=1
+Environment=OMP_NUM_THREADS=1
+Environment=ARROW_NUM_THREADS=1
+ExecStart=/opt/sector-dashboard/venv/bin/python scripts/quant_update.py --root /var/lib/sector-dashboard/quant-price-v2 --sources /var/lib/sector-dashboard/quant-price-sources
+MemoryHigh=320M
+MemoryMax=512M
+CPUQuota=65%
+Nice=10
+TimeoutStartSec=2h
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sector-dashboard/quant-price-v2 /var/lib/sector-dashboard/quant-price-sources
+UMask=0027

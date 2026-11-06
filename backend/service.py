@@ -17,6 +17,8 @@ def fresh_input(snapshot, board_time, max_seconds, mode):
         return False
     if mode == 'close':
         return snapshot['source_time'][:10] == board_time[:10] and snapshot['source_time'][11:16] >= '15:00'
+    if mode == 'midday':
+        return snapshot['source_time'][:10] == board_time[:10] and '11:25' <= snapshot['source_time'][11:16] < '13:00'
     return abs((datetime.fromisoformat(board_time)-datetime.fromisoformat(snapshot['source_time'])).total_seconds()) <= max_seconds
 
 
@@ -29,6 +31,10 @@ def close_session(stamp):
     if not stamp or stamp[11:16] < '15:00':
         raise DataError('仅采集收盘数据：来源尚未收盘，保留已有归档')
     return stamp[:10], 'close'
+
+
+def in_session(stamp, mode):
+    return bool(stamp and ('11:25' <= stamp[11:16] < '13:00' if mode == 'midday' else stamp[11:16] >= '15:00'))
 
 
 class Collector:
@@ -44,8 +50,20 @@ class Collector:
         self.status = 'idle'
         self.enrich_failures = 0
         self.enrich_next = 0
+        self.enrich_cursor = 0
         self.archive_phase = None
         self.pending_publish=set()
+        self.session_mode = 'close'
+        self.session_day = None
+
+    def session(self, stamp):
+        if self.session_day and (not stamp or stamp[:10] != self.session_day):
+            raise DataError('来源日期不属于本次采集交易日，保留已有快照')
+        if self.session_mode == 'midday':
+            if not in_session(stamp, 'midday'):
+                raise DataError('午间快照仅接受当日上午尾盘来源时间，不混入下午或收盘行情')
+            return stamp[:10], 'midday'
+        return close_session(stamp)
 
     def job(self, name, fn, interval=300):
         previous = self.last.get(name, 0)
@@ -69,13 +87,15 @@ class Collector:
 
     def market(self):
         stocks = self.provider.stocks()
-        valid = [r for r in stocks if valid_stock(r)]
+        valid = [r for r in stocks if valid_stock(r) and in_session(r.get('source_time'), self.session_mode)]
         stamp = source_time(valid)
         if not stamp:
             raise DataError('全市场缺少交易日期，保留原快照')
-        day, mode = close_session(stamp)
+        day, mode = self.session(stamp)
         # Exclude old/non-session quotes from the denominator.
-        same_day = [r for r in stocks if r.get('source_time','') and r['source_time'][:10] == day and r['source_time'][11:16]>='15:00']
+        same_day = [r for r in stocks if r.get('source_time','') and r['source_time'][:10] == day and in_session(r['source_time'], mode)]
+        eligible = {r['code'] for r in same_day}
+        stocks = [r if r['code'] in eligible else dict(r, price=None, change=None, amount=None, quote_status='stale_or_unavailable') for r in stocks]
         stats = breadth(same_day)
         stats['total']=len({r['code'] for r in stocks if hs_stock(r)})
         stats['coverage']=(stats['eligible']+stats['st']['eligible'])/stats['total'] if stats['total'] else None
@@ -94,7 +114,7 @@ class Collector:
         stamp = source_time(rows)
         if not stamp:
             raise DataError('指数缺少交易日期')
-        day, mode = close_session(stamp)
+        day, mode = self.session(stamp)
         self.store.save('indices',day,mode,{'rows':rows,'source':getattr(self.provider,'sources',{}).get('indices','东方财富')},stamp)
         return day, mode
 
@@ -120,7 +140,7 @@ class Collector:
         stamp = source_time(list(rows.values()))
         if not stamp:
             raise DataError('资金数据缺少交易日期，无法绑定行情快照')
-        day, mode = close_session(stamp)
+        day, mode = self.session(stamp)
         self.store.save('flow_'+sector_kind(kind,self.concept_source),day,mode,{'rows':rows,'source':getattr(self.provider,'sources',{}).get('flow_'+kind,vendor_name(kind,self.concept_source))},stamp)
 
     def boards(self, kind):
@@ -131,7 +151,7 @@ class Collector:
         stamp = source_time(rows)
         if not stamp:
             raise DataError('板块行情缺少交易日期，拒绝绑定采集日期')
-        day, mode = close_session(stamp)
+        day, mode = self.session(stamp)
         self.catalog[kind] = rows
         self.store.observe('catalog:'+sector_kind(kind,self.concept_source), rows)
         market = self.store.snapshot('market',day,mode)
@@ -204,33 +224,44 @@ class Collector:
             return False
         day = current.date().isoformat()
         checkpoint = bar_checkpoint(current)
+        queue = []
         for kind in ('industry','concept'):
             rows = self.catalog.get(kind) or self.store.observed('catalog:'+sector_kind(kind,self.concept_source)) or []
-            for r in rows:
-                code = r['code']
-                member_key = 'members:'+code+':'+day
-                if hasattr(self.provider,'members') and self.store.observed(member_key) is None:
-                    if self.failures.get(member_key,0) and time.monotonic()-self.last.get(member_key,0)<600:
-                        continue
+            if kind == 'concept' and self.concept_source == 'ths':
+                rows = sorted(rows, key=lambda r: (r.get('expected_count') is None, r.get('expected_count') or 0, r['code']))
+            queue.extend(rows)
+        for offset in range(len(queue)):
+            index = (self.enrich_cursor + offset) % len(queue)
+            row = queue[index]
+            code = row['code']
+            member_key = 'members:'+code+':'+day
+            if hasattr(self.provider,'members'):
+                saved = self.store.observed(member_key)
+                needs_members = saved is None or (code.startswith('THS') and row.get('expected_count') is not None
+                                                   and len(saved) != row['expected_count'])
+                if needs_members and self.enrich_due(member_key):
+                    self.enrich_cursor = index+1
                     def load_members():
                         members = self.provider.members(code)
                         self.store.observe(member_key,sorted({m['code'] for m in members}))
                     self.job(member_key,load_members)
                     return self.enrich_result(member_key)
-                bars_key = 'bars:'+code
-                if self.store.observed('bars_checked:'+code) != checkpoint:
-                    if self.failures.get(bars_key,0) and time.monotonic()-self.last.get(bars_key,0)<600:
-                        continue
-                    def load_bars():
-                        bars=self.provider.bars(code)
-                        # An unfinished daily candle is never archived as a close.
-                        if current.strftime('%H:%M') < '15:00':
-                            bars=[b for b in bars if b['date'] < day]
-                        self.store.observe(bars_key,bars)
-                        self.store.observe('bars_checked:'+code,checkpoint)
-                    self.job(bars_key,load_bars)
-                    return self.enrich_result(bars_key)
+            bars_key = 'bars:'+code
+            if self.enrich_due(bars_key) and self.store.observed('bars_checked:'+code) != checkpoint:
+                self.enrich_cursor = index+1
+                def load_bars():
+                    bars=self.provider.bars(code)
+                    if current.strftime('%H:%M') < '15:00':
+                        bars=[b for b in bars if b['date'] < day]
+                    self.store.observe(bars_key,bars)
+                    self.store.observe('bars_checked:'+code,checkpoint)
+                self.job(bars_key,load_bars)
+                return self.enrich_result(bars_key)
         return False
+
+    def enrich_due(self, key):
+        cooldown = 300 * min(8, 2 ** self.failures.get(key, 0))
+        return key not in self.last or time.monotonic() - self.last[key] >= cooldown
 
     def enrich_result(self, key):
         failed = self.failures.get(key,0)>0
@@ -246,10 +277,15 @@ class Collector:
         day = current.date().isoformat()
         archive_key = 'archive:'+day+':'+self.status+':'+self.concept_source+'-v1'
         need_archive = self.status.startswith('archive') and self.store.observed(archive_key) is None
-        active = self.status.startswith('archive') and (initial or need_archive)
-        if active:
+        mode = 'midday' if self.status == 'archive_midday' else 'close'
+        active = self.status.startswith('archive') and (need_archive or (initial and mode == 'close'))
+        # Restore the session even after a completed checkpoint: enrichment still
+        # runs during the archive window, including after a process restart.
+        if self.status.startswith('archive') and (self.session_day, self.session_mode) != (day, mode):
             if hasattr(self.provider,'begin_session'):
-                self.provider.begin_session(day)
+                self.provider.begin_session(day, mode=mode)
+            self.session_day, self.session_mode = day, mode
+        if active:
             if self.archive_phase != self.status:
                 # The 16:30 verification must not inherit 15:30 retry cooldowns.
                 for name in ('indices','market','pool_up','pool_broken','pool_down','flow_industry','flow_concept','board_industry','board_concept'):
@@ -259,20 +295,29 @@ class Collector:
             index_date = self.job('indices',self.indices)
             market = self.job('market',self.market)
             refreshed=bool(index_date or market)
-            if market or index_date:
+            if market and mode == 'midday':
+                # Publish prices before the slower board requests. The final pass
+                # adds verified membership as a new revision when it is available.
+                self.job('gainers_midday',lambda:build_rankings(self.store,day,mode),interval=0)
+            if mode == 'close' and (market or index_date):
                 self.pools(*(market or index_date))
             for kind in ('industry','concept'):
                 self.job('flow_'+kind,lambda k=kind:self.flow(k))
                 refreshed=bool(self.job('board_'+kind,lambda k=kind:self.boards(k))) or refreshed
-            if refreshed:build_rankings(self.store,day)
+            if refreshed:build_rankings(self.store,day,mode)
             if need_archive:
-                required=['industry',sector_kind('concept',self.concept_source),'market','indices','pools','flow_industry']
-                if not hasattr(self.provider,'supports_flow') or self.provider.supports_flow('concept'):required.append('flow_'+sector_kind('concept',self.concept_source))
-                snapshots = [self.store.snapshot(k,day,'close') for k in required]
-                complete_pools=bool(snapshots[4]) and all(v is not None for v in snapshots[4]['payload']['pools'].values())
+                required=['industry',sector_kind('concept',self.concept_source),'market','indices']
+                if mode == 'close':
+                    required.extend(['pools','flow_industry'])
+                    if not hasattr(self.provider,'supports_flow') or self.provider.supports_flow('concept'):required.append('flow_'+sector_kind('concept',self.concept_source))
+                else:
+                    required.append('gainers')
+                snapshots = [self.store.snapshot(k,day,mode) for k in required]
+                complete_pools=mode == 'midday' or (bool(snapshots[4]) and all(v is not None for v in snapshots[4]['payload']['pools'].values()))
                 fresh_sources=all('存档' not in s['payload'].get('source','') for s in snapshots if s)
                 complete_quotes=all(s and s['payload'].get('quote_coverage',1)==1 for s in snapshots[:2])
-                if complete_quotes and complete_pools and fresh_sources and all(s and s['collected_at'][:10]==day and s['collected_at'][11:16] >= ('16:30' if self.status=='archive_1630' else '15:30') for s in snapshots):
+                threshold = '12:00' if mode == 'midday' else '16:30' if self.status=='archive_1630' else '15:30'
+                if complete_quotes and complete_pools and fresh_sources and all(s and s['collected_at'][:10]==day and s['collected_at'][11:16] >= threshold for s in snapshots):
                     self.store.observe(archive_key,{'revisions':[s['id'] for s in snapshots]})
         return active
 
@@ -290,7 +335,7 @@ class Collector:
                 if self.status.startswith('archive'):
                     for kind in tuple(self.pending_publish):
                         if self.job('board_'+kind,lambda k=kind:self.boards(k)):
-                            build_rankings(self.store,datetime.now(TZ).date().isoformat())
+                            build_rankings(self.store,datetime.now(TZ).date().isoformat(),self.session_mode)
                             self.pending_publish.discard(kind)
             except Exception as exc:
                 self.store.event('scheduler',False,f'{type(exc).__name__}: {exc}')
@@ -304,6 +349,12 @@ class Collector:
         from .etf_tracker import run_scheduler as run_etf
         self.etf_thread=threading.Thread(target=run_etf,args=(self.store,self.stop),daemon=True,name='broad-etf')
         self.etf_thread.start()
+        from .financing import run_scheduler as run_financing
+        self.financing_thread=threading.Thread(target=run_financing,args=(self.store,self.stop),daemon=True,name='financing')
+        self.financing_thread.start()
+        from .index_pe import run_scheduler as run_index_pe
+        threading.Thread(target=run_index_pe, args=(self.store, self.stop),
+                         daemon=True, name='index-pe').start()
 
     def shutdown(self):
         self.stop.set()
@@ -311,7 +362,7 @@ class Collector:
 
 def metadata(snapshot, date, mode):
     if not snapshot:
-        return dict(trade_date=date,mode=mode,source_time=None,collected_at=None,revision=None,rule_version='sector-v1.0',coverage=None,status='missing')
-    return dict(trade_date=date,mode=mode,source_time=snapshot['source_time'],collected_at=snapshot['collected_at'],revision=snapshot['id'],
+        return dict(trade_date=date,mode=mode,provisional=mode!='close',source_time=None,collected_at=None,revision=None,rule_version='sector-v1.0',coverage=None,status='missing')
+    return dict(trade_date=date,mode=mode,provisional=mode!='close',source_time=snapshot['source_time'],collected_at=snapshot['collected_at'],revision=snapshot['id'],
                 rule_version=snapshot['rule_version'],coverage=snapshot['payload'].get('history_coverage'),status='available',sha256=snapshot['sha256'],
                 ingestion_method=snapshot['payload'].get('ingestion_method','automatic'),source=snapshot['payload'].get('source','东方财富'))

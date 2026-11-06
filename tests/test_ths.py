@@ -54,6 +54,80 @@ def test_funds_directory_fields_pages_and_duplicate_ids(tmp_path):
     with pytest.raises(DataError,match='重复'):p.catalog(DAY)
 
 
+def test_catalog_uses_one_stable_sort_and_rejects_old_rank_cache(tmp_path,monkeypatch):
+    import backend.ths as module
+    clock(monkeypatch)
+    store=Store(tmp_path/'db')
+    store.observe('ths_catalog:'+DAY,[dict(code='THS999999',name='旧排序缓存')])
+    store.observe('ths_catalog_checked:'+DAY,DAY+'T16:35:00+08:00')
+    store.observe('ths_catalog_schema:'+DAY,2)
+    requests=[]
+    homepage=html('<tr><td>2026-01-01</td><td><a href="https://q.10jqka.com.cn/gn/detail/code/301558/">新增概念</a></td><td>事件</td><td>--</td><td>11</td></tr>')
+    def read(url,day):
+        requests.append(url)
+        return homepage if url=='https://q.10jqka.com.cn/gn/' else url
+    def funds(url,identities=None,identity_sources=None):
+        prefix='https://data.10jqka.com.cn/funds/gnzjl/field/tradename/order/asc/page/'
+        assert url.startswith(prefix)
+        page=int(url[len(prefix):].strip('/'))
+        rows=[dict(code=f'THS{300000+(page-1)*50+i}',ths_cid=str(300000+(page-1)*50+i),
+                   name=f'概念{page}-{i}',expected_count=11,taxonomy='ths') for i in range(50)]
+        return page,2,rows
+    monkeypatch.setattr(module,'funds_catalog_page',funds)
+    provider=ThsConcepts(store);provider.read=read
+    result=provider.catalog(DAY)
+    assert len(result)==101 and len({r['code'] for r in result})==101
+    assert requests[:2]==[f'https://data.10jqka.com.cn/funds/gnzjl/field/tradename/order/asc/page/{p}/' for p in (1,2)]
+    assert 'THS999999' not in {r['code'] for r in result}
+    assert store.observed('ths_catalog_schema:'+DAY)==3
+
+
+def test_missing_funds_code_requires_exact_unique_official_identity():
+    document='<input id="baseUrl" value="funds/gnzjl">'+html('<tr><td>1</td><td><a href="http://q.10jqka.com.cn/gn/detail/code/ /">华为手机</a></td><td>100</td><td>1%</td><td>3</td><td>2</td><td>1</td><td>45</td><td>领涨股</td><td>10%</td><td>11</td></tr>')
+    for mapping in (None,{'华为手机概念':{'THS301558'}},{'华为手机':{'THS301558','THS300001'}}):
+        with pytest.raises(DataError,match='唯一核验'):funds_catalog_page(document,mapping)
+    row=funds_catalog_page(document,{'华为手机':{'THS301558'}})[2][0]
+    assert row['code']=='THS301558' and row['expected_count']==45
+    assert '官方导航' in row['identity_source']
+    with pytest.raises(DataError,match='数量异常'):
+        funds_catalog_page(document.replace('<td>45</td>','<td>--</td>'),{'华为手机':{'THS301558'}})
+    for bad in ('http://q.10jqka.com.cn/gn/detail/code/9999999/','/unexpected/path'):
+        with pytest.raises(DataError,match='代码链接异常'):
+            funds_catalog_page(document.replace('http://q.10jqka.com.cn/gn/detail/code/ /',bad),{'华为手机':{'THS301558'}})
+
+
+def test_catalog_resolves_missing_code_from_captured_official_navigation(tmp_path,monkeypatch):
+    clock(monkeypatch)
+    store=Store(tmp_path/'db');provider=ThsConcepts(store)
+    funds='<input id="baseUrl" value="funds/gnzjl">'+html('<tr><td>1</td><td><a href="http://q.10jqka.com.cn/gn/detail/code/ /">概念甲</a></td><td>100</td><td>1%</td><td>3</td><td>2</td><td>1</td><td>11</td><td>领涨股</td><td>10%</td><td>11</td></tr>')
+    home=html('<tr><td>2026-01-01</td><td><a href="https://q.10jqka.com.cn/gn/detail/code/301558/">概念甲</a></td><td>事件</td><td>--</td><td>11</td></tr>')
+    calls=[]
+    def read(url,day):
+        calls.append(url)
+        return home if url=='https://q.10jqka.com.cn/gn/' else funds
+    provider.read=read
+    rows=provider.catalog(DAY)
+    assert len(rows)==1 and rows[0]['code']=='THS301558' and rows[0]['expected_count']==11
+    assert '官方导航' in rows[0]['identity_source']
+    assert calls.count('https://q.10jqka.com.cn/gn/')==1
+
+
+def test_old_catalog_is_only_candidate_and_requires_current_official_quote(tmp_path,monkeypatch):
+    clock(monkeypatch)
+    store=Store(tmp_path/'db');provider=ThsConcepts(store)
+    store.observe('catalog:concept_ths',[dict(code='THS301558',name='概念甲',ths_cid='301558',expected_count=10)])
+    funds='<input id="baseUrl" value="funds/gnzjl">'+html('<tr><td>1</td><td><a href="http://q.10jqka.com.cn/gn/detail/code/ /">概念甲</a></td><td>100</td><td>1%</td><td>3</td><td>2</td><td>1</td><td>11</td><td>领涨股</td><td>10%</td><td>11</td></tr>')
+    home=html('<tr><td>2026-01-01</td><td><a href="https://q.10jqka.com.cn/gn/detail/code/300001/">另外概念</a></td><td>事件</td><td>--</td><td>12</td></tr>')
+    provider.read=lambda url,day:home if url=='https://q.10jqka.com.cn/gn/' else funds
+    for bad in ('2026-10-29T15:30:00+08:00',DAY+'T14:00:00+08:00'):
+        provider.quote=lambda row,day:dict(row,source_time=bad)
+        with pytest.raises(DataError,match='当日官方指数'):provider.catalog(DAY)
+    provider.quote=lambda row,day:dict(row,source_time=DAY+'T16:30:00+08:00')
+    rows=provider.catalog(DAY)
+    resolved=next(r for r in rows if r['code']=='THS301558')
+    assert resolved['expected_count']==11 and '当日指数响应' in resolved['identity_source']
+
+
 def test_detail_ignores_industry_chain_promotional_table():
     page='<table class="series-table"><tbody><tr><td>其他相关股票</td></tr></tbody></table>'+member_html(['600001'])
     assert detail_page(page,'301558')['members']==['600001']
@@ -164,3 +238,41 @@ def test_revised_catalog_quarantines_previously_verified_members(tmp_path):
     assert s.snapshot('gainers',DAY,'close')['payload']['rows'][0]['concepts']==[]
     with TestClient(create_app(s,collect=False)) as client:
         assert client.get('/api/sectors/THS301558',params={'kind':'concept','date':DAY}).json()['members_available'] is False
+
+
+def test_historical_member_sample_respects_session_cutoff(tmp_path):
+    from backend.ths_detail import display_evidence, DETAIL
+    store=Store(tmp_path/'sample.db')
+    row={'code':'THS301558','name':'概念','expected_count':13}
+    base=DETAIL+'301558/'
+    def capture(url,clock,text):
+        when=DAY+'T'+clock+'+08:00'
+        obs=store.observe('ths_raw:'+url,{'captured_at':when,'text':text,'source_url':url})
+        with store.connect() as db:db.execute('UPDATE observations SET observed_at=? WHERE id=?',(when,obs))
+    first=[str(600001+i) for i in range(10)]
+    capture(base,'12:01:00',member_html(first,1,2))
+    capture(base,'15:32:00',member_html(first[::-1],1,2))
+    capture(base+'page/2/','16:35:00',member_html(['600021','600022','600023'],2,2))
+    info=display_evidence(store,row,DAY,'close',DAY+'T15:40:00+08:00',True)
+    assert [r['code'] for r in info['sample']]==first[::-1] and len(info['pages'])==1
+    assert display_evidence(store,row,DAY,'close',DAY+'T15:30:00+08:00',True)['sample']==[]
+    assert len(display_evidence(store,row,DAY,'midday',DAY+'T17:00:00+08:00',True)['pages'])==1
+
+
+def test_failed_concept_does_not_block_next_concept(tmp_path,monkeypatch):
+    from backend.service import Collector
+    import backend.service as service
+    class Clock:
+        @staticmethod
+        def now(tz):return datetime(2026,10,30,17,0,tzinfo=TZ)
+    monkeypatch.setattr(service,'datetime',Clock)
+    class Provider:
+        def members(self,code):
+            if code=='THS300001':raise DataError('source unavailable')
+            return [{'code':'600001'}]
+    store=Store(tmp_path/'queue.db');store.observe('calendar',[DAY])
+    col=Collector(store,Provider());col.catalog={'concept':[{'code':c,'expected_count':1} for c in ['THS300001','THS300002']]}
+    assert not col.enrich_one()
+    col.enrich_next=0
+    assert col.enrich_one()
+    assert store.observed('members:THS300002:'+DAY)==['600001']

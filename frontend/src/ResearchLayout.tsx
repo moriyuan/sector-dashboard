@@ -7,12 +7,12 @@ import {Pagination} from 'antd';
 gsap.registerPlugin(useGSAP,ScrollTrigger);
 
 const destinations=[['overview','市场'],['sectors','板块'],['rotation','轮动'],['capital','资金'],['national-team','宽基ETF'],
-  ['gainers','个股'],['lhb','龙虎榜'],['news','新闻']] as const;
+  ['gainers','个股'],['lhb','龙虎榜'],['resonance','指数共振'],['barra','因子收益'],['daily','每日汇总'],['news','新闻']] as const;
 
-export function DeskNav({news,children,onNews}:{news:boolean;children:ReactNode;onNews:()=>void}){
+export function DeskNav({news,daily=false,barra=false,resonance=false,midday=false,children,onNews}:{news:boolean;daily?:boolean;barra?:boolean;resonance?:boolean;midday?:boolean;children:ReactNode;onNews:()=>void}){
  const [active,setActive]=useState('overview');
  useEffect(()=>{
-   if(news)return;
+   if(news||daily||barra||resonance)return;
    const sync=()=>{
      const headings=destinations.filter(([id])=>id!=='news').map(([id])=>document.getElementById(id)).filter((el):el is HTMLElement=>!!el);
      const before=headings.filter(el=>el.getBoundingClientRect().top<=135);
@@ -24,16 +24,20 @@ export function DeskNav({news,children,onNews}:{news:boolean;children:ReactNode;
    };
    let raf=0;
    const schedule=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;sync();});};
-   let anchor:HTMLElement|null=null,layoutFrame=0;
-   const release=()=>{anchor=null;cancelAnimationFrame(layoutFrame);};
+   let anchorId='',layoutFrame=0;
+   const release=()=>{anchorId='';cancelAnimationFrame(layoutFrame);};
    const align=()=>{
-     if(!anchor)return;
+     if(!anchorId)return;
      cancelAnimationFrame(layoutFrame);
-     layoutFrame=requestAnimationFrame(()=>anchor?.scrollIntoView({block:'start'}));
+     layoutFrame=requestAnimationFrame(()=>{
+       // Loading the archive date can remount the rankings beneath the same ID.
+       document.getElementById(anchorId)?.scrollIntoView({block:'start'});
+       schedule();
+     });
    };
    const follow=()=>{
      const id=location.hash.slice(1);
-     anchor=id&&id!=='news'?document.getElementById(id):null;
+     anchorId=id==='news'?'':id;
      align();
      schedule();
    };
@@ -45,11 +49,11 @@ export function DeskNav({news,children,onNews}:{news:boolean;children:ReactNode;
    follow();window.addEventListener('hashchange',follow);window.addEventListener('scroll',schedule,{passive:true});
    return()=>{layout.disconnect();release();inputs.forEach(event=>window.removeEventListener(event,release));
      window.removeEventListener('hashchange',follow);window.removeEventListener('scroll',schedule);cancelAnimationFrame(raf);};
- },[news]);
+ },[news,daily,barra,resonance,midday]);
  return <header className="desk-nav"><div className="nav-inner">
  <a className="desk-brand" href="#top" aria-label="复盘研究台首页"><svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="7"/><path d="M8 22h4v5H8zm7-9h4v14h-4zm7-6h4v20h-4z" fill="currentColor"/></svg><b>复盘研究台</b></a>
- <nav className="desk-links" aria-label="复盘导航">{destinations.map(([id,label])=><a key={id} href={'#'+id}
- aria-current={(news?id==='news':id===active)?'location':undefined} onClick={id==='news'?onNews:undefined}>{label}</a>)}</nav>
+ <nav className="desk-links" aria-label="复盘导航">{destinations.filter(([id])=>!midday||(id!=='national-team'&&id!=='lhb')).map(([id,label])=><a key={id} href={'#'+id}
+ aria-current={(resonance?id==='resonance':barra?id==='barra':daily?id==='daily':news?id==='news':id===active)?'location':undefined} onClick={id==='news'?onNews:undefined}>{label}</a>)}</nav>
  <div className="nav-tools">{children}</div></div></header>;
 }
 
@@ -121,7 +125,7 @@ export function SignalTab({id,label,count,active,select}:{id:string;label:string
  {label}<small>{count??'—'}</small></button>;
 }
 
-const sources=['腾讯财经 / 收盘行情','东方财富 / 行业与龙虎榜','同花顺 / 概念板块','财联社 / 电报',
+const sources=['腾讯财经 / 行情','东方财富 / 行业与龙虎榜','同花顺 / 概念板块','财联社 / 电报',
  '新浪财经 / 个股资讯','CNBC World / 海外报道','美联储 / 公告','NVIDIA / 新闻室'];
 export function SourceStrip(){
  const [paused,setPaused]=useState(false);

@@ -57,7 +57,7 @@ def test_schedule_lunch_holiday_and_archive():
     tz = ZoneInfo('Asia/Shanghai')
     def at(s): return datetime.fromisoformat(s).replace(tzinfo=tz)
     cal = ['2026-10-28', '2026-10-29', '2026-10-30']
-    assert phase(at('2026-10-29T12:00:00'), cal) == 'lunch'
+    assert phase(at('2026-10-29T12:00:00'), cal) == 'archive_midday'
     assert phase(at('2026-10-29T15:30:00'), cal) == 'archive_1530'
     assert phase(at('2026-10-29T16:30:00'), cal) == 'archive_1630'
     assert phase(at('2026-10-31T10:00:00'), cal) == 'calendar_unknown'

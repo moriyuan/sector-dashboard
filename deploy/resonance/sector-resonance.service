@@ -1,0 +1,25 @@
+[Unit]
+Description=Post-close minute replay for index and sector resonance
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=sector-dashboard
+Group=sector-dashboard
+WorkingDirectory=/opt/sector-dashboard/current
+Environment=TZ=Asia/Shanghai
+Environment=OPENBLAS_NUM_THREADS=1
+Environment=OMP_NUM_THREADS=1
+ExecStart=/opt/sector-dashboard/venv/bin/python scripts/resonance_update.py --data-dir /var/lib/sector-dashboard
+Nice=10
+CPUQuota=70%
+MemoryHigh=288M
+MemoryMax=424M
+TimeoutStartSec=90min
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+ReadWritePaths=/var/lib/sector-dashboard/resonance
+UMask=0027

@@ -1,4 +1,4 @@
-"""Close-only, versioned stock rankings; limit prices never use fixed percentages."""
+"""Session-scoped stock rankings; limit prices never use fixed percentages."""
 from decimal import Decimal, InvalidOperation
 from .analytics import valid_stock, hs_stock
 from .taxonomy import sector_kind
@@ -14,15 +14,15 @@ def at_limit(row,side='upper_limit'):
         return None
 
 
-def build_rankings(store,day):
-    stocks=store.snapshot('stocks',day,'close')
+def build_rankings(store,day,mode='close'):
+    stocks=store.snapshot('stocks',day,mode)
     if not stocks:return None
-    pools=store.snapshot('pools',day,'close')
+    pools=store.snapshot('pools',day,mode)
     sealed=(pools['payload']['pools'].get('up') if pools else None)
     up={r['code']:r for r in sealed or []}
     mappings={'industry':{},'concept':{}};refs={};membership_counts={}
     for kind in mappings:
-        board=store.snapshot(sector_kind(kind),day,'close')
+        board=store.snapshot(sector_kind(kind),day,mode)
         refs[kind]=board['id'] if board else None
         count=0
         for row in board['payload']['rows'] if board else []:
@@ -59,9 +59,9 @@ def build_rankings(store,day):
         rows.append(r)
     rows.sort(key=lambda r:(-r['change'],r['code']))
     inputs={'stocks':stocks['id'],'pools':pools['id'] if pools else None,**refs}
-    previous=store.snapshot('gainers',day,'close')
+    previous=store.snapshot('gainers',day,mode)
     if previous and previous['payload'].get('input_refs')==inputs:
         return previous['id']
-    return store.save('gainers',day,'close',{'rows':rows,'source':stocks['payload'].get('source','东方财富'),
+    return store.save('gainers',day,mode,{'rows':rows,'source':stocks['payload'].get('source','东方财富'),
         'input_refs':inputs,
         'membership_counts':membership_counts,'concept_source':'ths','scope':'沪深有效交易股票；行业为东方财富，概念为同花顺；默认排除ST；连板取涨停池，不以涨幅阈值推断'},stocks['source_time'])

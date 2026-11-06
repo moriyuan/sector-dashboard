@@ -62,6 +62,7 @@ def detail_page(text, cid, expected_count=None):
     single_page = not page.select_one('.page_info') and expected_count is not None and 1 <= expected_count <= 10
     current, total = (1, 1) if single_page else pagination(page)
     members = []
+    names = []
     ordinals = []
     for tr in page.select('table.m-pager-table tbody tr'):
         cells = tr.find_all('td')
@@ -71,7 +72,7 @@ def detail_page(text, cid, expected_count=None):
         ordinal = number(cells[0].get_text(strip=True))
         if not re.fullmatch(r'\d{6}',code) or ordinal is None or int(ordinal) != ordinal:
             raise DataError('同花顺成分代码或序号异常')
-        members.append(code); ordinals.append(int(ordinal))
+        members.append(code); names.append(cells[2].get_text(strip=True)); ordinals.append(int(ordinal))
     if not members or len(members)>10 or (current<total and len(members)!=10) or ordinals != list(range((current-1)*10+1,(current-1)*10+1+len(members))):
         raise DataError('同花顺成分分页序号不连续')
     if single_page and len(members)!=expected_count:
@@ -80,10 +81,27 @@ def detail_page(text, cid, expected_count=None):
     for dl in page.select('.board-infos dl'):
         dt, dd = dl.find('dt'), dl.find('dd')
         if dt and dd: infos[dt.get_text(strip=True)] = dd.get_text(' ',strip=True)
-    return dict(index_code=index, current=current, pages=total, members=members, infos=infos)
+    return dict(index_code=index, current=current, pages=total, members=members, names=names, infos=infos)
 
 
-def funds_catalog_page(text):
+class MissingConceptCode(DataError):
+    def __init__(self,name):
+        self.name=name
+        super().__init__('同花顺目录缺失代码，且官方来源无法唯一核验：'+name)
+
+
+def navigation_identities(text):
+    identities={}
+    for link in soup(text).select('.cate_inner a[href]'):
+        match=re.search(r'/gn/detail/code/(\d{6})/',link['href'])
+        if not match:raise DataError('同花顺目录导航代码异常')
+        identities.setdefault(link.get_text(strip=True),set()).add('THS'+match[1])
+    for row in catalog_page(text)[2]:
+        identities.setdefault(row['name'],set()).add(row['code'])
+    return identities
+
+
+def funds_catalog_page(text, identities=None, identity_sources=None):
     """The public concept funds directory lists 50 concepts per page, by CID."""
     page=soup(text)
     base=page.select_one('#baseUrl')
@@ -96,10 +114,21 @@ def funds_catalog_page(text):
         link=cells[1].find('a',href=True)
         match=re.search(r'/gn/detail/code/(\d{6})/',link['href']) if link else None
         count=number(cells[7].get_text(strip=True))
-        if not match or count is None or count<0 or count!=int(count):raise DataError('同花顺目录代码或数量异常')
+        name=link.get_text(strip=True) if link else ''
+        if match:
+            code='THS'+match[1]
+        else:
+            if not link or not re.fullmatch(r'(?:https?://q[.]10jqka[.]com[.]cn)?/gn/detail/code/\s*/?',link['href']):
+                raise DataError('同花顺目录代码链接异常')
+            candidates=(identities or {}).get(name,set())
+            if not name or len(candidates)!=1:
+                raise MissingConceptCode(name)
+            code=next(iter(candidates))
+        if count is None or count<0 or count!=int(count):raise DataError('同花顺目录数量异常')
         if number(cells[0].get_text(strip=True))!=(current-1)*50+i+1:raise DataError('同花顺概念目录序号不连续')
-        rows.append(dict(code='THS'+match[1],name=link.get_text(strip=True),ths_cid=match[1],
-                         expected_count=int(count),taxonomy='ths'))
+        row=dict(code=code,name=name,ths_cid=code[3:],expected_count=int(count),taxonomy='ths')
+        if not match:row['identity_source']=(identity_sources or {}).get(name,'同花顺官方导航：名称精确且代码唯一（资金页代码缺失）')
+        rows.append(row)
     if not rows:raise DataError('同花顺概念目录为空')
     return current,total,rows
 
@@ -131,15 +160,16 @@ def parse_bars(text):
     return sorted(result,key=lambda r:r['date'])
 
 
-def today_quote(text,index_code,name,day):
+def today_quote(text,index_code,name,day,mode='close'):
     obj=jsonp(text).get('bk_'+index_code)
     if not obj or obj.get('name')!=name:
         raise DataError('同花顺指数代码或名称不符')
     if str(obj.get('1'))!=day.replace('-',''):
         raise DataError('同花顺指数实际日期与目标日不符')
     clock=str(obj.get('dt',''))
-    if not re.fullmatch(r'\d{4}',clock) or not '1500'<=clock<='2359' or int(clock[2:])>=60:
-        raise DataError('同花顺指数尚无可验证的收盘源时间')
+    valid_clock=('1125'<=clock<'1300' if mode=='midday' else '1500'<=clock<='2359')
+    if mode not in ('close','midday') or not re.fullmatch(r'\d{4}',clock) or not valid_clock or int(clock[2:])>=60:
+        raise DataError('同花顺指数尚无可验证的'+('午间' if mode=='midday' else '收盘')+'源时间')
     vals={key:number(obj.get(field)) for key,field in [('open','7'),('high','8'),('low','9'),('close','11'),('amount','19')]}
     if any(v is None for v in vals.values()) or min(vals[k] for k in ('open','high','low','close'))<=0 or vals['amount']<0:
         raise DataError('同花顺收盘行情字段无效')
@@ -151,16 +181,32 @@ class ThsConcepts:
         self.store=store
         self.lock=threading.Lock()
         self.last=0.0
+        self.session_mode='close'
 
-    @staticmethod
-    def cutoff(day):
+    def cutoff(self,day):
+        if self.session_mode=='midday':
+            return day+'T12:00'
         now=datetime.now(TZ)
         return day+('T16:30' if now.date().isoformat()>day or now.strftime('%H:%M')>='16:30' else 'T15:30')
 
+    def quote_key(self,code,day):
+        return 'ths_quote:'+code+':'+day+(':midday' if self.session_mode=='midday' else '')
+
+    def valid_capture(self,stamp,day):
+        return (bool(stamp) and stamp[:10]==day and stamp>=self.cutoff(day)
+                and (self.session_mode!='midday' or stamp<day+'T13:00'))
+
+    def check_midday(self,day):
+        if self.session_mode=='midday':
+            current=datetime.now(TZ)
+            if (day!=current.date().isoformat() or day not in (self.store.observed('calendar') or [])
+                    or not '12:00'<=current.strftime('%H:%M')<'13:00'):
+                raise DataError('同花顺午间采集仅允许当日交易日12:00至13:00前')
+
     def read(self,url,day):
         old=self.store.observed('ths_raw:'+url)
-        # A capture after today's close may be reused; never morning/yesterday.
-        if old and old['captured_at'][:10]==day and old['captured_at']>=self.cutoff(day):
+        # Reuse only captures from this session, never the other session/day.
+        if old and self.valid_capture(old['captured_at'],day):
             return old['text']
         with self.lock:
             time.sleep(max(0,.2-(time.monotonic()-self.last)))
@@ -177,11 +223,41 @@ class ThsConcepts:
     def catalog(self,day):
         cached=self.store.observed('ths_catalog:'+day)
         checked=self.store.observed('ths_catalog_checked:'+day)
-        if cached and checked and checked>=self.cutoff(day) and self.store.observed('ths_catalog_schema:'+day)==2:return cached
-        rows=[];pages=None
+        if cached and self.valid_capture(checked,day) and self.store.observed('ths_catalog_schema:'+day)==3:return cached
+        rows=[];pages=None;homepage=None;identities=None;identity_sources={}
         for page in range(1,1001):
-            url='https://data.10jqka.com.cn/funds/gnzjl/' if page==1 else f'https://data.10jqka.com.cn/funds/gnzjl/field/tradezdf/order/desc/page/{page}/'
-            current,total,batch=funds_catalog_page(self.read(url,day))
+            # Performance rankings can change between cached pages or reorder
+            # tied gains. Enumerate every page in the same stable name order.
+            url=f'https://data.10jqka.com.cn/funds/gnzjl/field/tradename/order/asc/page/{page}/'
+            text=self.read(url,day)
+            attempted=set()
+            while True:
+                try:
+                    current,total,batch=funds_catalog_page(text,identities,identity_sources)
+                    break
+                except MissingConceptCode as exc:
+                    if identities is None:
+                        homepage=self.read('https://q.10jqka.com.cn/gn/',day)
+                        identities=navigation_identities(homepage)
+                        continue
+                    if identities.get(exc.name):raise
+                    if exc.name in attempted:raise
+                    attempted.add(exc.name)
+                    # A saved name/code pair is only a candidate. Require the
+                    # official current-date index response to confirm it anew.
+                    candidates={r['code']:r for r in self.store.observed('catalog:concept_ths') or []
+                                if r['name']==exc.name and re.fullmatch(r'THS\d{6}',r['code'])}
+                    if len(candidates)!=1:raise
+                    code,old=next(iter(candidates.items()))
+                    candidate=dict(code=code,name=exc.name,ths_cid=code[3:],taxonomy='ths',expected_count=old.get('expected_count'))
+                    verified=self.quote(candidate,day)
+                    stamp=verified.get('source_time') or ''
+                    clock=stamp[11:16]
+                    valid_clock='11:25'<=clock<'13:00' if self.session_mode=='midday' else clock>='15:00'
+                    if verified['code']!=code or verified['name']!=exc.name or stamp[:10]!=day or not valid_clock:
+                        raise DataError('同花顺候选代码未获当日官方指数响应确认')
+                    identities[exc.name]={code}
+                    identity_sources[exc.name]='同花顺当日指数响应：代码、名称、实际日期交叉核验（旧目录仅作候选）'
             if current!=page or (pages is not None and total!=pages):
                 raise DataError('同花顺目录分页改变或返回了错误页面')
             pages=total
@@ -191,7 +267,7 @@ class ThsConcepts:
         if len({r['code'] for r in rows})!=len(rows):raise DataError('同花顺目录重复概念代码')
         # The funds directory omits some concepts (e.g. no fund-flow coverage).
         # Merge only official CID links, never fuzzy names or Eastmoney mappings.
-        homepage=self.read('https://q.10jqka.com.cn/gn/',day)
+        homepage=homepage or self.read('https://q.10jqka.com.cn/gn/',day)
         home=soup(homepage)
         mapping={r['code']:r for r in rows}
         for link in home.select('.cate_inner a[href]'):
@@ -204,7 +280,7 @@ class ThsConcepts:
         rows=list(mapping.values())
         self.store.observe('ths_catalog:'+day,rows)
         self.store.observe('ths_catalog_checked:'+day,now_iso())
-        self.store.observe('ths_catalog_schema:'+day,2)
+        self.store.observe('ths_catalog_schema:'+day,3)
         self.store.observe('catalog:concept_ths',rows)
         return rows
 
@@ -216,39 +292,50 @@ class ThsConcepts:
         return result
 
     def quote(self,row,day):
-        cached=self.store.observed('ths_quote:'+row['code']+':'+day)
-        if cached and cached.get('captured_at','')>=self.cutoff(day) and cached.get('name')==row['name']:return dict(cached,**row)
+        self.check_midday(day)
+        key=self.quote_key(row['code'],day)
+        cached=self.store.observed(key)
+        if cached and self.valid_capture(cached.get('captured_at'),day) and cached.get('name')==row['name']:return dict(cached,**row)
         page=soup(self.read(f"https://q.10jqka.com.cn/gn/detail/code/{row['ths_cid']}/",day))
         index=index_code(page,row['ths_cid'])
-        bar,stamp=today_quote(self.read(f'https://d.10jqka.com.cn/v4/line/bk_{index}/01/today.js',day),index,row['name'],day)
-        recent=self.read(f'https://d.10jqka.com.cn/v4/line/bk_{index}/01/last.js',day)
-        history=parse_bars(recent)
-        years=jsonp(recent).get('year',{})
-        if len(history)<251:
-            for year in (int(day[:4])-1,int(day[:4])):
-                if str(year) in years:
-                    try:history.extend(parse_bars(self.read(f'https://d.10jqka.com.cn/v4/line/bk_{index}/01/{year}.js',day)))
-                    except DataError as exc:self.store.event('ths_history:'+row['code'],False,str(exc))
-        bars={b['date']:b for b in history if b['date']<=day};bars[day]=bar
-        bars=sorted(bars.values(),key=lambda b:b['date'])
-        for i,b in enumerate(bars):b['change']=(b['close']/bars[i-1]['close']-1)*100 if i else None
-        previous=[b for b in bars if b['date']<day]
-        if not previous:raise DataError('同花顺缺少前收盘点位')
+        bar,stamp=today_quote(self.read(f'https://d.10jqka.com.cn/v4/line/bk_{index}/01/today.js',day),index,row['name'],day,self.session_mode)
         cal=self.store.observed('calendar') or []
         expected=max((d for d in cal if d<day),default=None)
+        history=self.store.observed('bars:'+row['code']) or []
+        previous=[b for b in history if b['date']<day]
+        reuse=(self.session_mode=='midday' and previous and previous[-1]['date']==expected)
+        if not reuse:
+            recent=self.read(f'https://d.10jqka.com.cn/v4/line/bk_{index}/01/last.js',day)
+            history=parse_bars(recent)
+            years=jsonp(recent).get('year',{})
+            if len(history)<251:
+                for year in (int(day[:4])-1,int(day[:4])):
+                    if str(year) in years:
+                        try:history.extend(parse_bars(self.read(f'https://d.10jqka.com.cn/v4/line/bk_{index}/01/{year}.js',day)))
+                        except DataError as exc:self.store.event('ths_history:'+row['code'],False,str(exc))
+        bars={b['date']:b for b in history if b['date']<day}
+        if self.session_mode=='close':bars[day]=bar
+        bars=sorted(bars.values(),key=lambda b:b['date'])
+        if not reuse:
+            for i,b in enumerate(bars):b['change']=(b['close']/bars[i-1]['close']-1)*100 if i else None
+        previous=[b for b in bars if b['date']<day]
+        if not previous:raise DataError('同花顺缺少前收盘点位')
         if expected and previous[-1]['date']!=expected:raise DataError('同花顺前收盘日不连续')
         self.store.observe('bars:'+row['code'],bars[-251:])
-        result=dict(row,index_code=index,price=bar['close'],change=bar['change'],amount=bar['amount'],captured_at=now_iso(),
+        self.check_midday(day)
+        result=dict(row,index_code=index,price=bar['close'],change=(bar['close']/previous[-1]['close']-1)*100,amount=bar['amount'],captured_at=now_iso(),
                     pre_close=previous[-1]['close'],turnover=None,source_time=stamp,source_time_precision='minute',
                     vendor_up=None,vendor_down=None,vendor_flat=None,quote_status='received')
-        self.store.observe('ths_quote:'+row['code']+':'+day,result)
+        self.store.observe(key,result)
         return result
 
     def members(self,row,day):
         now=datetime.now(TZ)
         calendar=self.store.observed('calendar') or []
         eligible=[d for d in calendar if d<now.date().isoformat() or (d==now.date().isoformat() and now.strftime('%H:%M')>='15:30')]
-        if not eligible or day!=max(eligible) or (now.date().isoformat()>day and now.date().isoformat() in calendar and now.strftime('%H:%M')>='09:15'):
+        self.check_midday(day)
+        midday=self.session_mode=='midday'
+        if not midday and (not eligible or day!=max(eligible) or (now.date().isoformat()>day and now.date().isoformat() in calendar and now.strftime('%H:%M')>='09:15')):
             raise DataError('同花顺无历史成分接口，拒绝重建历史归属')
         old=self.store.observed('members_meta:'+row['code']+':'+day)
         if old and old.get('verified') and old.get('expected_count')==row['expected_count']:
@@ -264,26 +351,27 @@ class ThsConcepts:
             raise DataError('同花顺成分数量与目录不符或分页重复')
         self.store.observe('members:'+row['code']+':'+day,sorted(members))
         self.store.observe('members_meta:'+row['code']+':'+day,dict(source='同花顺概念成分',source_time=None,
-            captured_at=now_iso(),session_date=day,classification='同花顺概念 CID',reported_count=len(members),
+            captured_at=now_iso(),session_date=day,session_mode=self.session_mode,classification='同花顺概念 CID',reported_count=len(members),
             expected_count=row['expected_count'],verified=True,validation='完整分页、唯一代码'+('及同日概念目录数量核对' if row['expected_count'] is not None else '；无独立目录数量')))
         return members
 
     def boards(self,day,fetch=True):
+        self.check_midday(day)
         rows=[]
         for row in self.catalog(day):
             try:
-                quote=self.quote(row,day) if fetch else self.store.observed('ths_quote:'+row['code']+':'+day)
+                quote=self.quote(row,day) if fetch else self.store.observed(self.quote_key(row['code'],day))
                 if not quote:raise DataError('同花顺该概念报价未采集')
                 quote=dict(quote,**row)
-                if not fetch and quote.get('captured_at','')<self.cutoff(day):quote['quote_status']='stale'
+                if not fetch and not self.valid_capture(quote.get('captured_at'),day):quote['quote_status']='stale'
                 rows.append(quote)
             except Exception as exc:
                 self.store.event('ths_quote:'+row['code'],False,str(exc))
-                old=self.store.observed('ths_quote:'+row['code']+':'+day)
+                old=self.store.observed(self.quote_key(row['code'],day))
                 if old and old.get('source_time','').startswith(day+'T'):
                     rows.append(dict(old,quote_status='stale'))
                 else:
                     rows.append(dict(row,price=None,change=None,amount=None,pre_close=None,turnover=None,
                         source_time=None,vendor_up=None,vendor_down=None,vendor_flat=None,quote_status='missing'))
-        if not any(r['source_time'] for r in rows):raise DataError('同花顺概念收盘报价全部不可用')
+        if not any(r['source_time'] for r in rows):raise DataError('同花顺概念'+('午间' if self.session_mode=='midday' else '收盘')+'报价全部不可用')
         return rows

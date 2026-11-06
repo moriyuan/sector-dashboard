@@ -30,6 +30,9 @@ def test_two_reasons_seats_net_and_historical_isolation(tmp_path):
         by={x['period']:x for x in d['rows']}
         assert by['single']['buy'][0]['name']=='单日买方' and by['three']['sell'][0]['net']==-1
         assert by['single']['net']==-10000000 and by['three']['net']==-10000000
+        listing=c.get('/api/lhb',params={'date':DAY}).json()
+        assert len(listing['rows'])==2 and all(r['change'] is None for r in listing['rows'])
+        assert listing['quote_date'] is None and listing['quote_source_time'] is None
         assert c.get('/api/lhb/000001',params={'date':DAY}).json()['rows']==[]
         assert c.get('/api/lhb',params={'date':'2026-10-30'}).json()['revision'] is None
         assert c.get('/api/lhb',params={'date':DAY,'asof':'2026-10-30T16:00:00+08:00'}).json()['rows']==[]
@@ -111,3 +114,64 @@ def test_orphan_a_share_seat_blocks_complete_label(tmp_path):
     assert result['status']=='partial' and result['issues']
     by=s.snapshot('lhb',DAY,'close')['payload']['rows']
     assert len(by)==1 and [r['name'] for r in by[0]['buy']]==['买方']
+
+
+def test_listing_daily_change_covers_all_stocks_and_periods_without_cross_date(tmp_path,monkeypatch):
+    store=Store(tmp_path/'db')
+    clock=[DAY+'T16:00:00+08:00']
+    monkeypatch.setattr('backend.store.now_iso',lambda:clock[0])
+    notices=[head(i+1,'日换手率达到20%的前5只证券',code) for i,code in enumerate(['002086','000001','000002','000003','000004'])]
+    notices.append(head(9,'连续3个交易日内涨幅偏离值累计达到30%的证券'))
+    collect(store,DAY,lambda table,day:notices if table=='summary' else [])
+    def quote(code,change,is_st=False):
+        return dict(code=code,name='样本'+code,change=change,is_st=is_st,industry=[],concepts=[],boards=None,price=10,amount=1e8)
+    rows=[quote(str(600100+i),20) for i in range(101)]
+    rows.extend([quote('002086',10),quote('000001',-3.2),quote('000002',0),quote('000004',-5,True)])
+    revision=store.save('gainers',DAY,'close',{'rows':rows},DAY+'T15:00:00+08:00')
+    store.save('gainers',DAY,'midday',{'rows':[quote('000003',88)]},DAY+'T11:30:00+08:00')
+    store.save('gainers','2026-11-03','close',{'rows':[quote('000003',99)]},'2026-11-03T15:00:00+08:00')
+    with TestClient(create_app(store,collect=False)) as client:
+        result=client.get('/api/lhb',params={'date':DAY,'asof':DAY+'T16:30:00+08:00'}).json()
+        by={r['code']:r for r in result['rows']}
+        assert by['002086']['change']==10 and by['000001']['change']==-3.2
+        assert by['000002']['change']==0 and by['000003']['change'] is None
+        assert by['000004']['change']==-5
+        assert {r['change'] for r in result['rows'] if r['code']=='002086'}=={10}
+        assert result['quote_date']==DAY and result['gainers_revision']==revision
+        assert result['quote_source_time']==DAY+'T15:00:00+08:00'
+        clock[0]=DAY+'T17:00:00+08:00'
+        later=store.save('gainers',DAY,'close',{'rows':[quote('002086',11)]},DAY+'T15:00:00+08:00')
+        prior=client.get('/api/lhb',params={'date':DAY,'asof':DAY+'T16:30:00+08:00'}).json()
+        assert prior['gainers_revision']==revision and prior['rows'][0]['change']==result['rows'][0]['change']
+        latest=client.get('/api/lhb',params={'date':DAY}).json()
+        assert latest['gainers_revision']==later
+        assert all(r['change']==11 for r in latest['rows'] if r['code']=='002086')
+
+
+def test_three_day_compounding_calendar_missing_and_asof(tmp_path,monkeypatch):
+    from backend.lhb_api import three_day_changes
+    from backend.gainer_news import gainers_snapshot
+    s=Store(tmp_path/'db'); clock=['2026-10-29T18:00:00+08:00']
+    monkeypatch.setattr('backend.store.now_iso',lambda:clock[0])
+    days=['2026-10-29','2026-10-30','2026-11-02']
+    s.observe('calendar',days)
+    def rows(price):
+        return [dict(code='000001',price=price,pre_close=10),dict(code='000002',price=10,pre_close=10),dict(code='000003',price=10,pre_close=0)]
+    for d,p in zip(days,[11,11,9]):
+        clock[0]=d+'T16:00:00+08:00'
+        s.save('gainers',d,'close',{'rows':rows(p)})
+    cutoff=datetime.fromisoformat(DAY+'T16:30:00+08:00')
+    market=gainers_snapshot(s,DAY,cutoff)
+    values,window,revisions=three_day_changes(s,DAY,cutoff,market,{'000001','000002','000003','000004'})
+    assert values['000001']==pytest.approx(8.9)
+    assert values['000002']==0 and '000003' not in values and '000004' not in values
+    assert window==days and len(revisions)==3
+    from datetime import timezone
+    assert three_day_changes(s,DAY,cutoff.astimezone(timezone.utc),market,{'000001'})[0]=={'000001':values['000001']}
+    clock[0]=DAY+'T17:00:00+08:00'
+    s.save('gainers','2026-10-30','close',{'rows':rows(20)})
+    assert three_day_changes(s,DAY,cutoff,market,{'000001'})[0]['000001']==pytest.approx(8.9)
+    # A missing exchange trading day cannot be replaced by an older available quote.
+    clock[0]=DAY+'T16:00:00+08:00'
+    s.observe('calendar',['2026-10-30','2026-10-31',DAY])
+    assert three_day_changes(s,DAY,cutoff,market,{'000001'})[0]=={}

@@ -21,6 +21,7 @@ a,button,input,select{touch-action:manipulation}
 .nav-tools{--control-height:36px;display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-left:auto;white-space:nowrap}
 .nav-date,.rank-date{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
 .nav-date .archive-picker{width:138px;height:var(--control-height)}
+.nav-tools .snapshot-mode{flex-shrink:0;font-size:13px}.nav-tools .snapshot-mode .ant-segmented-item-label{min-height:28px;line-height:28px;padding-inline:10px}
 .nav-tools .desk-refresh{width:68px;height:var(--control-height);padding-inline:6px}
 .nav-back{padding:7px 10px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:12px;color:var(--ink)}
 .archive-picker input{font-variant-numeric:tabular-nums}
@@ -35,6 +36,7 @@ a,button,input,select{touch-action:manipulation}
 .desk-detail-body>h3{font-size:14px;margin:22px 0 10px}.desk-detail-body h3 small{font-size:11px;color:var(--muted);margin-left:6px}
 .desk-detail-body .empty{min-height:120px}
 main.research-page{margin:0 auto;padding:20px clamp(18px,3.8vw,70px) 38px;width:100%;max-width:1550px;overflow-x:clip}
+.cache-update-line{display:flex;align-items:center;flex-wrap:wrap;gap:5px 12px;margin:0 0 10px;color:var(--muted);font-size:11px;line-height:1.6}.cache-update-line .follow-latest{font-size:11px;padding-inline:7px;height:25px}.cache-update-line .follow-latest[aria-pressed=true]{color:#36583e;background:#e8eddf}
 .research-cover{position:relative;isolation:isolate;display:grid;place-items:center;overflow:hidden;min-height:clamp(260px,23vw,360px);padding:44px 20px 40px;background:#233a34;color:#fff;border-radius:9px}
 .research-cover::before,.research-cover::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:-1}
 .research-cover::before{background:url("./assets/closing-horizon.jpg") center 48%/cover;filter:saturate(.49) contrast(1.06)}
@@ -63,7 +65,7 @@ main.research-page{margin:0 auto;padding:20px clamp(18px,3.8vw,70px) 38px;width:
 .research-page .section-head p,.research-page .footnote{color:var(--muted);line-height:1.7}
 .grid-flow-dense{display:grid;grid-auto-flow:dense;grid-template-columns:repeat(12,minmax(0,1fr));gap:clamp(12px,1.5vw,24px)}
 .grid-flow-dense>*{min-width:0}
-.research-page .index-strip{border:1px solid var(--line);background:#fffef9;border-radius:6px;gap:0;margin-bottom:12px;padding:0;overflow:hidden}
+.research-page .index-strip{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--line);background:#fffef9;border-radius:6px;gap:0;margin-bottom:12px;padding:0;overflow:hidden}
 .index-strip>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 5px;padding:12px 15px;border-right:1px solid var(--line)}
 .index-strip>div:last-child{border-right:0}
 .index-strip span{grid-column:1/-1;width:auto;color:#54635a;font-size:12px}
@@ -144,13 +146,13 @@ main.research-page{margin:0 auto;padding:20px clamp(18px,3.8vw,70px) 38px;width:
 }
 #overview,#sectors,#rotation,#capital,#gainers,#lhb,#news-workspace,.news-detail{scroll-margin-top:8px}
 @media(min-width:801px) and (max-width:1120px){
- .nav-inner{gap:18px}.desk-links{gap:13px}.index-strip>div{padding:10px}.index-strip strong{font-size:17px}
+ .nav-inner{gap:18px}.nav-date>span{display:none}.desk-links{gap:13px}.index-strip>div{padding:10px}.index-strip strong{font-size:17px}
  .index-strip b{font-size:11px}.signal-slice{flex-basis:27px}.main-grid>.panorama{grid-column:span 7}
  .market-bento .breadth-card{grid-column:span 7}.notes-deck{grid-column:span 5}
 }
 @media(max-width:800px){
- html{scroll-padding-top:86px}.nav-inner{padding:9px 17px 0;gap:3px 12px;display:grid;grid-template-columns:1fr auto;min-height:unset}
- .desk-brand{font-size:15px}.desk-brand svg{width:25px;height:25px}.nav-tools{grid-column:2;grid-row:1;gap:5px}
+ html{scroll-padding-top:128px}.nav-inner{padding:9px 17px 0;gap:3px 12px;display:grid;grid-template-columns:1fr auto;min-height:unset}
+ .desk-brand{font-size:15px}.desk-brand svg{width:25px;height:25px}.nav-tools{grid-column:1/-1;grid-row:2;gap:8px;justify-content:space-between;margin:5px 0 0}.nav-tools .snapshot-mode{margin-left:auto}
  .nav-date{gap:0}.nav-date>span{display:none}.nav-date .archive-picker{width:112px;padding-inline:7px}.nav-date .archive-picker input{font-size:12px}.nav-tools .desk-refresh{width:60px;font-size:12px}.nav-back{font-size:11px;padding:5px 7px}
  .desk-links{grid-column:1/-1;display:flex;gap:0;justify-content:space-between;overflow:auto;scrollbar-width:none}.desk-links a{padding:10px 3px 12px;font-size:12px}
  .desk-links a[aria-current]::after{bottom:2px;height:2px}.research-cover{min-height:230px;padding:30px 16px}

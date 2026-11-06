@@ -11,7 +11,7 @@ type Seat={name:string;buy:number|null;sell:number|null;net:number|null};
 type RecordRow={id:string;code:string;name:string;reason:string;period:Period;net:number|null;
   buy_total:number|null;sell_total:number|null;buy:Seat[];sell:Seat[];buy_state:string;sell_state:string};
 type Day={trade_date:string;status:string;revision:number|null;collected_at:string|null;checked_at:string|null;issues:string[];rows:RecordRow[]};
-type Listing=Day&{related_by_code:Record<string,Profile>};
+type Listing=Omit<Day,'rows'>&{rows:(RecordRow&{change:number|null;three_day_change:number|null})[];three_day_window:string[];related_by_code:Record<string,Profile>};
 type Hit={id:string;title:string;source:string;published_at:string;basis:string;timing:string;url:string};
 type Detail=Day&{stock:{code:string;name:string;rank:number|null;change:number|null;direct:Hit[];sector:Hit[]};
                  related:Profile;news_asof:string;gainers_revision:number|null};
@@ -20,6 +20,7 @@ const states:Record<string,string>={published:'已有披露',pending:'待披露'
 const when=(s:string|null)=>s?new Date(s).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false}):'—';
 const wan=(v:number|null)=>v==null?'—':(v/10000).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const sign=(v:number|null)=>v==null?'':v>0?'up':v<0?'down':'';
+const change=(v:number|null)=>v==null?'—':`${v>0?'+':''}${v.toFixed(2)}%`;
 
 function useReport<T>(path:string,refresh=0) {
  const [state,setState]=useState<{path:string;data?:T;error?:string}>({path:''});
@@ -59,10 +60,11 @@ function DisclosureGroup({group,data,onStock}:{group:Period;data:Listing;onStock
  const rows=data.rows.filter(r=>r.period===group);
  const pages=usePages(rows,10,data.trade_date+group);
  return <details className="lhb-group" key={group} open={group==='single'}><summary>{groups[group]} · {rows.length} 条披露</summary>
- {rows.length?<><div className="table-wrap"><table><thead><tr><th>股票</th><th>上榜原因</th><th>净买额（万）</th><th>上涨线索与相关股票</th></tr></thead><tbody>
+ {group==='three'&&<p className="footnote">累计区间：{data.three_day_window?.length===3?`${data.three_day_window[0]} 至 ${data.three_day_window[2]}`:'交易日历不足'} · 按三个交易日收盘价／昨收参考价连乘计算，缺少任一日有效报价显示 —。</p>}
+ {rows.length?<><div className="table-wrap"><table><thead><tr><th>股票</th><th className="lhb-change">当日涨跌幅</th>{group==='three'&&<th className="lhb-change" title={data.three_day_window?.join('、')}>三日累计涨跌幅</th>}<th>上榜原因</th><th>净买额（万）</th><th>上涨线索与相关股票</th></tr></thead><tbody>
  {pages.visible.map(r=>{
    const peers=data.related_by_code?.[r.code],open=(code:string,name:string)=>onStock({code,name,date:data.trade_date});
-   return <tr key={r.id}><td><button className="lhb-stock-link" onClick={()=>open(r.code,r.name)}>{r.name}</button><small>{r.code}</small></td><td>{r.reason}</td><td className={sign(r.net)}>{wan(r.net)}</td>
+   return <tr key={r.id}><td><button className="lhb-stock-link" onClick={()=>open(r.code,r.name)}>{r.name}</button><small>{r.code}</small></td><td className={`lhb-change ${r.change==null?'muted':sign(r.change)}`}>{change(r.change)}</td>{group==='three'&&<td className={`lhb-change ${r.three_day_change==null?'muted':sign(r.three_day_change)}`}>{change(r.three_day_change)}</td>}<td className="lhb-reason">{r.reason}</td><td className={sign(r.net)}>{wan(r.net)}</td>
    <td className="lhb-peer-preview">{peers?.causes?.length?<><button className="move-preview-cause" onClick={()=>open(r.code,r.name)} title={peers.causes[0].evidence.fact}>{peers.causes[0].topic||'个股事件'} · 查看依据</button>
    {peers.rows.map(peer=><button key={peer.code} title={peer.matches[0].evidence.fact} onClick={()=>open(peer.code,peer.name)}>#{peer.rank} {peer.name}</button>)}
    {peers.total>peers.rows.length&&<button className="text-button" onClick={()=>open(r.code,r.name)}>全部 {peers.total} 只</button>}
@@ -78,7 +80,7 @@ export function LhbBoard({data,error,onStock}:{data?:Listing;error?:string;onSto
  {data&&<><Status data={data}/>{data.rows.length===0?<p className="footnote">
  {data.status==='pending'?'来源尚无该日沪深 A 股披露记录，盘后自动复查。':'该交易日暂无可展示的本地记录。'}</p>:
  (Object.keys(groups) as Period[]).map(group=><DisclosureGroup key={data.trade_date+group} group={group} data={data} onStock={onStock}/>)}</>}
- <p className="footnote">先核对新闻里的上涨线索，再从同日非 ST 涨幅榜前 100 名查找同一催化下被报道的股票，含未上龙虎榜者。每项龙虎榜披露单独列示，不同原因或周期的净买额可能重叠。</p></section>;
+ <p className="footnote">涨跌幅使用所选交易日的收盘报价，三日累计列为截至榜单日的三个交易日复合涨跌幅，非涨幅偏离值，亦不保证与异常交易披露的起止区间相同；缺少报价显示 —。先核对新闻里的上涨线索，再从同日非 ST 涨幅榜前 100 名查找同一催化下被报道的股票，含未上龙虎榜者。每项龙虎榜披露单独列示，不同原因或周期的净买额可能重叠。</p></section>;
 }
 
 function Seats({row,side}:{row:RecordRow;side:'buy'|'sell'}){

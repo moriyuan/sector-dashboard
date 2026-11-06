@@ -77,14 +77,14 @@ def test_fixed_board_revision_pins_prior_flow_revisions(tmp_path):
 
 @pytest.mark.parametrize('clock,calendar,allowed', [
     ('10:00',['2026-10-29','2026-10-30'],False),
-    ('12:00',['2026-10-29','2026-10-30'],False),
+    ('12:00',['2026-10-29','2026-10-30'],True),
     ('15:20',['2026-10-29','2026-10-30'],False),
     ('15:30',['2026-10-29','2026-10-30'],True),
     ('16:30',['2026-10-29','2026-10-30'],True),
     ('18:00',['2026-10-30'],False),
     ('18:00',[],False),
 ])
-def test_post_close_scheduler_gates_startup(tmp_path,monkeypatch,clock,calendar,allowed):
+def test_scheduled_sessions_gate_startup(tmp_path,monkeypatch,clock,calendar,allowed):
     import backend.service as service
     current=datetime.fromisoformat('2026-10-29T'+clock).replace(tzinfo=TZ)
     class Clock:
@@ -92,7 +92,7 @@ def test_post_close_scheduler_gates_startup(tmp_path,monkeypatch,clock,calendar,
         def now(tz):return current
     monkeypatch.setattr(service,'datetime',Clock)
     db=Store(tmp_path/'test.db');db.observe('calendar',calendar)
-    col=Collector(db);calls=[]
+    col=Collector(db,object());calls=[]
     def job(name,fn,interval=300):
         calls.append(name)
         return None
@@ -120,5 +120,6 @@ def test_api_exposes_only_close_dates_and_status(tmp_path):
         for endpoint in ('/api/sectors','/api/market','/api/sectors/BK0001'):
             assert client.get(endpoint,params={'mode':'live'}).status_code==422
         status=client.get('/api/status').json()
-        assert status['mode']=='post_close' and status['archive_times']==['15:30','16:30']
+        assert status['mode']=='midday_and_post_close' and status['archive_times']==['15:30','16:30']
+        assert status['midday_times']==['12:00']
         assert 'quote_interval' not in status
