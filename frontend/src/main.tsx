@@ -67,7 +67,7 @@ function Spark({values,color}:{values:(number|null)[];color:string}){
    <polyline points={line} fill="none" stroke={color} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round"/>
   </svg>;
 }
-function EmotionCard({ice,climax,day,iceHist,cxHist,open,onToggle}:{ice:number|null;climax:number|null;day:string;iceHist:(number|null)[];cxHist:(number|null)[];open:boolean;onToggle:()=>void}){
+function EmotionCard({ice,climax,day,iceHist,cxHist,icePct,cxPct,open,onToggle}:{ice:number|null;climax:number|null;day:string;iceHist:(number|null)[];cxHist:(number|null)[];icePct:number|null;cxPct:number|null;open:boolean;onToggle:()=>void}){
   return <div className="emo-card" onClick={onToggle} title={open?'收起历史曲线':'点击展开历史曲线'}>
    <div className="emo-card-head">
     <span className="sentiment-label">情绪打分<em className="sentiment-tag">自研</em></span>
@@ -75,11 +75,17 @@ function EmotionCard({ice,climax,day,iceHist,cxHist,open,onToggle}:{ice:number|n
     <span className="sentiment-hint">{open?'收起 ↑':'历史曲线 ↓'}</span>
    </div>
    <div className="emo-card-body">
-    <div className="emo-block"><small>冰点分 · 越大约冰</small><strong style={{color:'#4a7a9a'}}>{ice==null?'—':fmt(ice,1)}</strong><Spark values={iceHist} color="#4a7a9a"/></div>
-    <div className="emo-block"><small>高潮分 · 越大约热</small><strong style={{color:'#c8842a'}}>{climax==null?'—':fmt(climax,1)}</strong><Spark values={cxHist} color="#c8842a"/></div>
+    <div className="emo-block"><small>冰点分 · 越大约冰</small><strong style={{color:'#4a7a9a'}}>{ice==null?'—':fmt(ice,1)}</strong><Spark values={iceHist} color="#4a7a9a"/>{icePct!=null&&<span className="emo-rank">比近60日 {icePct}% 的天更冰</span>}</div>
+    <div className="emo-block"><small>高潮分 · 越大约热</small><strong style={{color:'#c8842a'}}>{climax==null?'—':fmt(climax,1)}</strong><Spark values={cxHist} color="#c8842a"/>{cxPct!=null&&<span className="emo-rank">比近60日 {cxPct}% 的天更热</span>}</div>
    </div>
   </div>;
 }
+const rankPct=(vals:(number|null)[],v:number|null):number|null=>{
+  if(v==null)return null;
+  const xs=vals.filter((x):x is number=>x!=null).slice(-60);
+  if(xs.length<10)return null;
+  return Math.round(xs.filter(x=>x<v).length/xs.length*100);
+};
 const color=(v:Nullable)=>v==null?'muted':v>0?'up':v<0?'down':'muted';
 const indexStrip = [['000001','上证指数'],['399001','深证成指'],['399006','创业板指'],['000300','沪深300'],['000680','科创综指']] as const;
 const labelNames:Record<string,string>={hot:'热点',cold:'冷门低关注',ice:'退潮冰点候选'};
@@ -192,7 +198,7 @@ function App(){
  <div className="metrics"><div className="metric wide"><span>市场成交额</span><strong>{amt(stats?.amount)}</strong><small>沪深 A 股 · 含 ST · 有效报价</small></div><div className="metric wide"><span>上涨 / 下跌</span><strong><b className="up">{fmt(stats?.up,0)}</b><em>/</em><b className="down">{fmt(stats?.down,0)}</b></strong><div className="breadth-track"><i style={{width:`${stats?.up_ratio??0}%`}}/></div><small>平盘 {fmt(stats?.flat,0)} · ST 涨 {fmt(stats?.st.up,0)} / 跌 {fmt(stats?.st.down,0)}</small></div><div className="metric"><span>{fullLimits?'涨停 / 跌停':'池中涨停 / 跌停'}</span><strong><b className="up">{fmt(fullLimits?stats?.quote_limit_up:emotion?.limit_up,0)}</b><em>/</em><b className="down">{fmt(fullLimits?stats?.quote_limit_down:emotion?.limit_down,0)}</b></strong><small>{fullLimits?'源涨跌停价判定 · 非ST':'供应商池覆盖 · 非ST'}</small></div><div className="metric"><span>炸板率</span><strong>{emotion?.broken_ratio==null?'—':`${fmt(emotion.broken_ratio,1)}%`}</strong><small>东财池：未封住 / 当日曾涨停</small></div><div className="metric clickable" onClick={toggleCurve} title={showCurve?'收起走势曲线':'点击查看走势'}><span>最高连板<em className="metric-hint">{showCurve?'收起 ↑':'走势 ↓'}</em></span><strong>{fmt(emotion?.max_boards,0)}<small>板</small></strong><small>东财池 · 非ST，科创板可能未收录</small></div></div>
  <SentimentStrip data={market?.sentiment??null} open={showCurve} onToggle={toggleCurve}/>
  <div className="emotion-cards">
- <EmotionCard ice={emoLatest?.ice??null} climax={emoLatest?.climax??null} day={emoLatest?.date||''} iceHist={emoCurve.map(r=>r.ice).slice(-30)} cxHist={emoCurve.map(r=>r.climax).slice(-30)} open={showEmo} onToggle={toggleEmo}/>
+ <EmotionCard ice={emoLatest?.ice??null} climax={emoLatest?.climax??null} day={emoLatest?.date||''} iceHist={emoCurve.map(r=>r.ice).slice(-30)} cxHist={emoCurve.map(r=>r.climax).slice(-30)} icePct={rankPct(emoCurve.map(r=>r.ice),emoLatest?.ice??null)} cxPct={rankPct(emoCurve.map(r=>r.climax),emoLatest?.climax??null)} open={showEmo} onToggle={toggleEmo}/>
  <Leaders entry={<div className="emo-card pool-card" title="管理核心龙头股票池">
   <div className="emo-card-head">
    <span className="sentiment-label">龙头池<em className="sentiment-tag">情绪核心</em></span>
@@ -261,7 +267,7 @@ function App(){
      label:{show:true,position:'bottom' as const,fontSize:9,color:'#c8842a',lineHeight:12,formatter:(p:any)=>p.value??''},
      data:emoDays.map(d=>{const t=emoByDate[d];return t&&t.climax!=null?t.climax:null;})
    }]}}/>:<Empty title="暂无打分数据" text="等待连续交易日的市场快照与涨停池积累。"/>}
- <p className="footnote">冰点分越大情绪越冰，高潮分越大越极致火热 · 五维打分：广度/涨跌停/封板率/龙头/大面（冰点）与广度/涨停/龙头/最高板/封板率（高潮）· 龙头取「龙头池」情绪核心池，池空时用昨日连板股兜底 · 标注「日K近似回补」的日期为池数据缺失段（约两周前），由日 K 近似计算</p></section>}
+ <p className="footnote">冰点分越大情绪越冰，高潮分越大越极致火热 · 各维度分段线性平滑打分：冰点=广度/跌停/封板率/龙头/大面/跌停放大，高潮=广度/涨停/封板率/龙头/最高板/连板晋级率/涨停放大 · 龙头取「龙头池」情绪核心池（≥3 只才记分），池空时用昨日连板股兜底 · 卡片标注相对近 60 日的分位 · 标注「日K近似回补」的日期为池数据缺失段（约两周前），由日 K 近似计算</p></section>}
  <div className="market-bento grid-flow-dense"><section className="breadth-card"><h3>涨跌分布</h3> {stats?<Chart height={150} option={{grid:{left:40,right:20,top:18,bottom:30},tooltip:{trigger:'axis'},xAxis:{type:'category',data:['<-7%','-7~-3%','-3~0%','平盘','0~3%','3~7%','≥7%']},yAxis:{type:'value',minInterval:1},series:[{type:'bar',label:{show:true,position:'top',fontSize:10,color:'#58675d'},data:stats.distribution.map((v,i)=>({value:v,itemStyle:{color:i<3?'#6da58f':i>3?'#ce887e':'#b9bcb3'}}))}]}}/>:<Empty title="暂无涨跌分布" text="等待该日市场广度快照。"/>}</section><NotesDeck notes={notes}/></div>
  <p className="footnote">指数 {market?.indices_meta?.source} · {timeText(market?.indices_meta?.source_time)} / 广度 {market?.meta.source} · {timeText(market?.meta.source_time)} · 情绪池源 {timeText(market?.emotion_meta.source_time)} / 采集 {timeText(market?.emotion_meta.collected_at)} · 收盘报价覆盖 {stats?.quote_coverage==null?'未知':`${fmt(stats.quote_coverage*100,1)}%`} · 有效交易占比 {stats?.coverage==null?'未知':`${fmt(stats.coverage*100,1)}%`}</p>
  </section>

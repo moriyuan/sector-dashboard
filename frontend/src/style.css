@@ -68,6 +68,7 @@
 .emo-block small{font-size:11px;color:#8b8d87}
 .emo-block strong{font-size:24px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
 .spark{width:100%;height:34px;display:block;margin-top:4px}
+.emo-rank{font-size:10px;color:#a3a69e;margin-top:2px;font-variant-numeric:tabular-nums}
 .spark-empty{background:repeating-linear-gradient(90deg,transparent 0 6px,rgba(139,141,135,.12) 6px 7px)}
 /* 龙头池卡 */
 .pool-rows{display:flex;flex-direction:column}
