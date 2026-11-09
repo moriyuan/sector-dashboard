@@ -13,9 +13,11 @@
   5. 大面个数：(最高价-收盘价)/最高价 ≥10% 的股票数，10/20 → 1~2 线性
   6. 跌停放大：今日跌停 ÷ 近 5 日跌停均值（样本 ≥3 天且均值 >0），1.5/2 倍 → 1~2 线性
 
-高潮分（7 维，满分 20）
+高潮分（7 维，满分 22）
   1. 上涨广度：<4000→0；4000/4334/4667/5000 → 1~4 线性
-  2. 涨停个数：<65→0；65/84/102/120 → 1~4 线性
+  2. 涨停个数：<65→0；65/80/95/110 → 1~4 线性；
+     加成：涨停股成交额 ÷ 近 5 日均值（样本 ≥3 天且均值 >0），2/3 倍 → +1/+2 两档，
+     叠加在个数分上，本维合计最高 6（用户拍板 2026-11-09）
   3. 封板率：样本 <10→置空；82%→1，86%→2，区间线性
   4. 龙头表现：同一批龙头，样本 ≥3 只才记分；均涨 3%→1、6%→2 线性
   5. 最高板：6/7/8/9+ 板 → 1/2/3/4
@@ -25,6 +27,9 @@
 近两周（有 pools 快照）用池数据精确计；更早日期用日 K 近似回补，
 涨停/跌停按板块阈值近似（主板 9.8%、双创 19.8%、北交所 29.8%、ST 4.8%），
 炸板=盘中触及涨停价但未封住，最高板与连板=逐股重建；source 标注 pool / kline。
+新股上市初期、复牌首日等无涨跌幅限制的异动（|涨跌幅| > 1.5×板块阈值）
+不计入涨跌停、连板与龙头统计。
+涨停股成交额统一用日 K 近似涨停口径加总（池数据期同口径），保证跨期比值可比。
 """
 import json
 import math
@@ -64,11 +69,23 @@ def _is_st(row):
     return 'ST' in str(row.get('name') or '').upper()
 
 
+def _no_limit(row):
+    """当日无涨跌幅限制（新股上市初期、复牌首日等）：涨跌幅超出制度阈值 1.5 倍。
+
+    这类异动不是真涨停/跌停，计入会污染涨跌停统计、连板重建与龙头均值。
+    """
+    change = row.get('change')
+    if change is None:
+        return False
+    return abs(change) > _threshold(row) * 1.5
+
+
 def _valid_hs(rows):
-    """沪深、非 ST、行情有效的股票行。"""
+    """沪深、非 ST、行情有效、当日有涨跌幅限制的股票行。"""
     seen = {}
     for r in rows:
-        if hs_stock(r) and not _is_st(r) and r.get('change') is not None and r.get('price'):
+        if (hs_stock(r) and not _is_st(r) and not _no_limit(r)
+                and r.get('change') is not None and r.get('price')):
             seen[r['code']] = r
     return seen
 
@@ -101,15 +118,17 @@ def _drawdown(row):
 
 
 def _kline_stats(rows):
-    """日 K 近似统计：涨停/跌停/炸板/大面。"""
+    """日 K 近似统计：涨停/跌停/炸板/大面 + 涨停股成交额。"""
     ups = _valid_hs(rows)
     sealed = [r for r in ups.values() if _sealed(r)]
     limit_dn = [r for r in ups.values() if _limit_down(r)]
     broken = [r for r in ups.values() if _broken(r)]
     drawdowns = [r for r in ups.values() if (_drawdown(r) or 0) >= 10]
+    lu_amount = sum(r.get('amount') or 0 for r in sealed)
     return {'limit_up': len(sealed), 'limit_down': len(limit_dn),
             'broken': len(broken), 'drawdown': len(drawdowns),
-            'sealed_codes': {r['code'] for r in sealed}}
+            'sealed_codes': {r['code'] for r in sealed},
+            'lu_amount': lu_amount}
 
 
 def _streaks(store, dates):
@@ -243,7 +262,7 @@ def _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=None):
 
 
 def _climax_dims(breadth, boards, leaders, leaders_note, max_boards,
-                 promote=None, prev5_lu=None):
+                 promote=None, prev5_lu=None, prev5_lu_amount=None):
     dims = []
     if breadth:
         up_n, _ = breadth
@@ -253,9 +272,25 @@ def _climax_dims(breadth, boards, leaders, leaders_note, max_boards,
         dims.append({'key': 'breadth', 'name': '上涨广度', 'score': s, 'input': n})
     if boards:
         lu, broken = boards['limit_up'], boards['broken']
-        # 65 起步，84 / 102 / 120 → 1~4 线性，超过 120 封顶 4
-        s = 0 if lu < 65 else _lerp(lu, [(65, 1), (84, 2), (102, 3), (120, 4)])
-        dims.append({'key': 'limit_up', 'name': '涨停个数', 'score': s, 'input': lu})
+        # 65 起步，80 / 95 / 110 → 1~4 线性，超过 110 封顶 4
+        s = 0 if lu < 65 else _lerp(lu, [(65, 1), (80, 2), (95, 3), (110, 4)])
+        dim = {'key': 'limit_up', 'name': '涨停个数', 'score': s, 'input': lu}
+        # 成交额加成：今日涨停股成交额 ÷ 近 5 日均值，2/3 倍 → +1/+2 两档，
+        # 叠加在个数分上，本维合计最高 6（用户拍板 2026-11-09）
+        lu_amount = boards.get('lu_amount')
+        if lu_amount is not None:
+            dim['lu_amount'] = round(lu_amount / 1e8, 2)  # 亿元
+        bonus = 0
+        surge = _surge(lu_amount or 0, prev5_lu_amount) if lu_amount else None
+        if surge:
+            ratio, base = surge
+            dim['amount_ratio'] = round(ratio, 2)
+            dim['amount_base'] = round(base / 1e8, 2)     # 近5日均值，亿元
+            bonus = 0 if ratio < 2 else _lerp(ratio, [(2, 1), (3, 2)])
+            if bonus:
+                dim['bonus'] = bonus
+        dim['score'] = min(s + bonus, 6)
+        dims.append(dim)
         sample = lu + broken
         if sample >= 10:
             rate = lu / sample * 100
@@ -296,7 +331,8 @@ def _sum(dims):
 def compute(store, date, prev_streak=None, today_streak=None, prev5=None):
     """计算某一天的冰点分/高潮分，返回落库行 dict；数据不足返回 None。
 
-    prev5: 近 5 个收盘日的 [(limit_up, limit_down), ...]，用于涨停/跌停放大维度。
+    prev5: 近 5 个收盘日的 [(limit_up, limit_down, lu_amount|None), ...]，
+    用于涨停/跌停放大维度与涨停成交额加成。
     """
     breadth = _breadth(store, date)
     snap = store.snapshot('stocks', date, 'close')
@@ -311,7 +347,8 @@ def compute(store, date, prev_streak=None, today_streak=None, prev5=None):
     max_boards = None
     if pstats:
         boards = {'limit_up': pstats['limit_up'], 'limit_down': pstats['limit_down'],
-                  'broken': pstats['broken'], 'drawdown': kstats['drawdown'] if kstats else None}
+                  'broken': pstats['broken'], 'drawdown': kstats['drawdown'] if kstats else None,
+                  'lu_amount': kstats['lu_amount'] if kstats else None}
         max_boards = pstats['max_boards']
     elif kstats:
         boards = kstats
@@ -330,11 +367,13 @@ def compute(store, date, prev_streak=None, today_streak=None, prev5=None):
             hit = sum(1 for c in cands if c in kstats['sealed_codes'])
             promote = (hit / len(cands) * 100, len(cands))
 
-    prev5_lu = [lu for lu, _ in (prev5 or [])]
-    prev5_ld = [ld for _, ld in (prev5 or [])]
+    prev5_lu = [t[0] for t in (prev5 or [])]
+    prev5_ld = [t[1] for t in (prev5 or [])]
+    prev5_amt = [t[2] for t in (prev5 or []) if t[2] is not None]
     ice_dims = _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=prev5_ld)
     climax_dims = _climax_dims(breadth, boards, leaders, leaders_note, max_boards,
-                               promote=promote, prev5_lu=prev5_lu)
+                               promote=promote, prev5_lu=prev5_lu,
+                               prev5_lu_amount=prev5_amt)
     revision = 0
     msnap = store.snapshot('market', date, 'close')
     if msnap:
@@ -348,21 +387,23 @@ def compute(store, date, prev_streak=None, today_streak=None, prev5=None):
 
 
 def _lu_ld_of(row):
-    """从缓存行的 subs JSON 提取 (涨停数, 跌停数)；解析失败返回 None。"""
+    """从缓存行的 subs JSON 提取 (涨停数, 跌停数, 涨停成交额元|None)；解析失败返回 None。"""
     try:
         subs = json.loads(row['subs'])
     except (TypeError, ValueError):
         return None
-    lu = ld = None
+    lu = ld = amt = None
     for d in subs.get('climax') or []:
         if d.get('key') == 'limit_up':
             lu = d.get('input')
+            if d.get('lu_amount') is not None:
+                amt = d['lu_amount'] * 1e8  # subs 里存亿元，还原为元
     for d in subs.get('ice') or []:
         if d.get('key') == 'limit_down':
             ld = d.get('input')
     if lu is None or ld is None:
         return None
-    return lu, ld
+    return lu, ld, amt
 
 
 def _ensure_schema(db):

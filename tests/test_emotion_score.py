@@ -11,12 +11,12 @@ from backend.store import Store
 D0, D1, D2, D3 = '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'
 
 
-def stk(code, change, touch=None, name='测试股'):
+def stk(code, change, touch=None, name='测试股', amount=1e6):
     """prev_close=100；touch=盘中最高涨幅（默认=max(change,0)）。"""
     prev = 100.0
     price = round(prev * (1 + change / 100), 2)
     high = round(prev * (1 + (touch if touch is not None else max(change, 0)) / 100), 2)
-    return dict(code=code, name=name, change=change, price=price, high=high, amount=1e6)
+    return dict(code=code, name=name, change=change, price=price, high=high, amount=amount)
 
 
 def save_day(store, day, up, down, rows):
@@ -199,3 +199,67 @@ def test_promote_sample_guard(tmp_path):
     save_day(store, D2, 4500, 100, [stk('600601', 10, 10)])
     clx = subs(full_rows(store)[D2], 'climax')
     assert 'promote' not in clx
+
+
+def test_new_stock_excluded(tmp_path):
+    """无涨跌幅限制的新股（涨幅超制度阈值 1.5 倍）不计涨停、不入连板。"""
+    store = Store(tmp_path / 't.db')
+    save_day(store, D0, 2000, 2000, [stk('600701', 44, 44, 'N新股'), stk('600900', 2)])
+    save_day(store, D1, 2000, 2000, [stk('600701', 30, 30), stk('600702', 10, 10)])
+    clx = subs(full_rows(store)[D1], 'climax')
+    assert clx['limit_up']['input'] == 1      # 只有 600702 算涨停，新股两日暴涨不计
+    assert clx['max_boards']['input'] == 1    # 新股不入连板，最高板仅 600702 的 1 板
+    assert 'leaders' not in clx               # 昨日无有效连板 → 无龙头样本
+
+
+def test_no_limit_boundary(tmp_path):
+    """阈值边界：正常涨停股（20cm/30cm 制度内）不被误伤。"""
+    store = Store(tmp_path / 't.db')
+    save_day(store, D0, 2000, 2000, [stk('300701', 20, 20), stk('830702', 30, 30, '北交A'),
+                                     stk('600703', 10, 10)])
+    clx = subs(full_rows(store)[D0], 'climax')
+    assert clx['limit_up']['input'] == 2      # 300 与主板计入；北交所本就不在沪深范围
+
+
+def test_lu_amount_bonus(tmp_path):
+    """涨停成交额 ÷ 近5日均值 ≥2 倍 → +1（≥3 倍 +2）；昨日已放量、今日更高也得分。"""
+    store = Store(tmp_path / 't.db')
+    save_day(store, D0, 2000, 2000, [stk('600801', 10, 10, amount=1e8)])
+    save_day(store, D1, 2000, 2000, [stk('600802', 10, 10, amount=1e8)])
+    save_day(store, D2, 2000, 2000, [stk('600803', 10, 10, amount=2.4e8)])  # 昨日已放量
+    rows_today = [stk('600804', 10, 10, amount=1e8), stk('600805', 10, 10, amount=1e8),
+                  stk('600806', 10, 10, amount=1e8)]                        # 今日 3 亿，仅昨日 1.25 倍
+    save_day(store, D3, 2000, 2000, rows_today)
+    rows = full_rows(store)
+    d0 = subs(rows[D0], 'climax')['limit_up']
+    assert d0['score'] == 0 and 'bonus' not in d0           # 首日无基线
+    assert d0['lu_amount'] == 1.0                           # 亿元
+    d3 = subs(rows[D3], 'climax')['limit_up']
+    assert d3['lu_amount'] == 3.0 and d3['amount_base'] == 1.47
+    assert d3['amount_ratio'] == 2.05                       # 相对近5日均值放量 2 倍
+    assert d3['bonus'] == 1 and d3['score'] == 1            # 计数 0 分 + 加成 1
+
+
+def test_lu_amount_bonus_lerp():
+    from backend.emotion_score import _lerp
+    a = [(2, 1), (3, 2)]
+    assert _lerp(1.9, a) == 1                               # 钳制到下端（调用方判 <2 不加成）
+    assert _lerp(2.5, a) == 1.5
+    assert _lerp(5, a) == 2                                 # 3 倍以上封顶 +2
+
+
+def test_limit_up_stacked_cap6(tmp_path):
+    """涨停维度：个数 100→3.5 叠加成交额加成 +2 = 5.5；合计上限 6。"""
+    store = Store(tmp_path / 't.db')
+    for d in (D0, D1, D2):
+        save_day(store, d, 2000, 2000, [stk('600901', 10, 10, amount=1e8)])
+    rows = [stk('600902', 10, 10, amount=1.5e8), stk('600903', 10, 10, amount=1.5e8),
+            stk('600904', 10, 10, amount=1.5e8)]
+    save_day(store, D3, 4600, 200, rows)
+    store.save('pools', D3, 'close', {'pools': {'up': [], 'broken': [], 'down': []},
+                                      'stats': {'limit_up': 100, 'limit_down': 5, 'broken': 5,
+                                                'broken_ratio': 4.8, 'max_boards': 7}},
+               f'{D3}T15:00:00+08:00')
+    dim = subs(full_rows(store)[D3], 'climax')['limit_up']
+    assert dim['bonus'] == 2                    # 4.5 亿 ÷ 近5日均 1 亿 = 4.5 倍 → +2
+    assert dim['score'] == 5.5                  # 3.5 + 2 叠加，未到 6 上限
