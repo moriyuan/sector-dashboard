@@ -14,6 +14,7 @@ import EtfTracker from './EtfTracker';
 import {CapitalFlow, FlowPeriods, type Flow} from './CapitalFlow';
 import News from './News';
 import Backlog from './Backlog';
+import Leaders from './Leaders';
 import {LhbDrawer,type StockPick} from './Lhb';
 import type {Opening} from './GainerNews';
 import './research.css';
@@ -54,6 +55,29 @@ function SentimentStrip({data,open,onToggle}:{data:Sentiment|null;open:boolean;o
    <div className="sentiment-track"><b style={{left:`${data.score}%`}}/></div>
    <Popover content={detail} placement="bottom"><span className="sentiment-more" onClick={e=>e.stopPropagation()}>五维明细</span></Popover>
    <span className="sentiment-hint">{open?'收起 ↑':'历史曲线 ↓'}</span>
+  </div>;
+}
+function Spark({values,color}:{values:(number|null)[];color:string}){
+  const pts=values.filter((v):v is number=>v!=null);
+  if(pts.length<2)return <div className="spark spark-empty"/>;
+  const max=Math.max(...pts,1),W=120,H=34,step=W/(pts.length-1);
+  const line=pts.map((v,i)=>`${(i*step).toFixed(1)},${(H-3-(v/max)*(H-8)).toFixed(1)}`).join(' ');
+  return <svg className="spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+   <polygon points={`0,${H} ${line} ${W},${H}`} fill={color} opacity={0.10}/>
+   <polyline points={line} fill="none" stroke={color} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round"/>
+  </svg>;
+}
+function EmotionCard({ice,climax,day,iceHist,cxHist,open,onToggle}:{ice:number|null;climax:number|null;day:string;iceHist:(number|null)[];cxHist:(number|null)[];open:boolean;onToggle:()=>void}){
+  return <div className="emo-card" onClick={onToggle} title={open?'收起历史曲线':'点击展开历史曲线'}>
+   <div className="emo-card-head">
+    <span className="sentiment-label">情绪打分<em className="sentiment-tag">自研</em></span>
+    <span className="emo-card-meta">{day?`${day.slice(5)} 收盘`:''}</span>
+    <span className="sentiment-hint">{open?'收起 ↑':'历史曲线 ↓'}</span>
+   </div>
+   <div className="emo-card-body">
+    <div className="emo-block"><small>冰点分 · 越大约冰</small><strong style={{color:'#4a7a9a'}}>{ice==null?'—':fmt(ice,1)}</strong><Spark values={iceHist} color="#4a7a9a"/></div>
+    <div className="emo-block"><small>高潮分 · 越大约热</small><strong style={{color:'#c8842a'}}>{climax==null?'—':fmt(climax,1)}</strong><Spark values={cxHist} color="#c8842a"/></div>
+   </div>
   </div>;
 }
 const color=(v:Nullable)=>v==null?'muted':v>0?'up':v<0?'down':'muted';
@@ -102,7 +126,10 @@ function App(){
  const [kind,setKind]=useState('industry');const [conceptSource,setConceptSource]=useState('ths');const mode='close';const [date,setDate]=useState('');const [dates,setDates]=useState<Dates>({snapshots:[],history_dates:[]});
  const [data,setData]=useState<Listing|null>(null);const [market,setMarket]=useState<Market|null>(null);const [status,setStatus]=useState<Status|null>(null);const [error,setError]=useState('');const [loading,setLoading]=useState(true);const [refresh,setRefresh]=useState(0);const [sentiCurve,setSentiCurve]=useState<{date:string;score:number}[]>([]);
  const [boardsCurve,setBoardsCurve]=useState<{date:string;tiers:{boards:number;names:string[]}[]}[]>([]);const [showCurve,setShowCurve]=useState(false);const [curveSel,setCurveSel]=useState({senti:true,boards:true});
+ const [emoCurve,setEmoCurve]=useState<{date:string;ice:number|null;climax:number|null;source:string}[]>([]);const [showEmo,setShowEmo]=useState(false);
+ const [leaderPerf,setLeaderPerf]=useState<{date:string|null;pools:{emotion:{code:string;name:string;d1:number|null;d10:number|null;d20:number|null}[]}}|null>(null);
  const toggleCurve=()=>{const nv=!showCurve;setShowCurve(nv);if(nv)setTimeout(()=>document.getElementById('curve')?.scrollIntoView({behavior:'smooth',block:'center'}),80);};
+ const toggleEmo=()=>{const nv=!showEmo;setShowEmo(nv);if(nv)setTimeout(()=>document.getElementById('emotion-curve')?.scrollIntoView({behavior:'smooth',block:'center'}),80);};
  const toggleSel=(k:'senti'|'boards')=>setCurveSel(s=>{const n={...s,[k]:!s[k]};return n.senti||n.boards?n:s;});
  const [query,setQuery]=useState('');const [period,setPeriod]=useState('1');const [ranking,setRanking]=useState('hot');const [sort,setSort]=useState('heat');const [selected,setSelectedRaw]=useState<string|null>(null);const [detailRevision,setDetailRevision]=useState<number|null>(null);const setSelected=(code:string|null)=>{setDetailRevision(null);setSelectedRaw(code);};const [detail,setDetail]=useState<Detail|null>(null);const [detailError,setDetailError]=useState('');const [stockSort,setStockSort]=useState('change');const [showHealth,setShowHealth]=useState(false);const [showRules,setShowRules]=useState(false);
  const [dateHint,setDateHint]=useState('读取日期…');
@@ -115,7 +142,7 @@ function App(){
    }).catch(()=>{if(!controller.signal.aborted)setDateHint('日期未能读取');});
    return()=>controller.abort();
  },[refresh]);
- useEffect(()=>{const controller=new AbortController();setLoading(true);const qs=new URLSearchParams({kind,mode,concept_source:conceptSource,...(date?{date}:{})});Promise.all([get<Listing>(`api/sectors?${qs}`,controller.signal),get<Market>(`api/market?${qs}`,controller.signal),get<Status>('api/status',controller.signal),get<{rows:{date:string;score:number}[]}>('api/sentiment?limit=500',controller.signal),get<{rows:{date:string;tiers:{boards:number;names:string[]}[]}[]}>('api/boards-history?limit=250',controller.signal)]).then(([d,m,s,c,bd])=>{if(controller.signal.aborted)return;setData(d);setMarket(m);setStatus(s);setSentiCurve(c.rows||[]);setBoardsCurve(bd.rows||[]);setError('');}).catch(e=>{if(e.name!=='AbortError'){setError('本地服务暂不可用，请检查启动终端。');setData(null);setMarket(null);}}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();},[kind,conceptSource,mode,date,refresh]);
+ useEffect(()=>{const controller=new AbortController();setLoading(true);const qs=new URLSearchParams({kind,mode,concept_source:conceptSource,...(date?{date}:{})});Promise.all([get<Listing>(`api/sectors?${qs}`,controller.signal),get<Market>(`api/market?${qs}`,controller.signal),get<Status>('api/status',controller.signal),get<{rows:{date:string;score:number}[]}>('api/sentiment?limit=500',controller.signal),get<{rows:{date:string;tiers:{boards:number;names:string[]}[]}[]}>('api/boards-history?limit=250',controller.signal),get<{rows:{date:string;ice:number|null;climax:number|null;source:string}[]}>('api/emotion-score?limit=250',controller.signal),get<{date:string|null;pools:{emotion:{code:string;name:string;d1:number|null;d10:number|null;d20:number|null}[]}}>('api/leaders/perf',controller.signal).catch(()=>null)]).then(([d,m,s,c,bd,em,lp])=>{if(controller.signal.aborted)return;setData(d);setMarket(m);setStatus(s);setSentiCurve(c.rows||[]);setBoardsCurve(bd.rows||[]);setEmoCurve(em.rows||[]);setLeaderPerf(lp);setError('');}).catch(e=>{if(e.name!=='AbortError'){setError('本地服务暂不可用，请检查启动终端。');setData(null);setMarket(null);}}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();},[kind,conceptSource,mode,date,refresh]);
  useEffect(()=>{if(!selected){setDetail(null);return;}const controller=new AbortController();setDetail(null);setDetailError('');const qs=new URLSearchParams({kind,mode,concept_source:conceptSource,...(date?{date}:{}),...((detailRevision??data?.meta.revision)?{revision:String(detailRevision??data?.meta.revision)}:{})});get<Detail>(`api/sectors/${selected}?${qs}`,controller.signal).then(setDetail).catch(e=>{if(e.name!=='AbortError')setDetailError('所选日期没有该板块的完整详情。');});return()=>controller.abort();},[selected,kind,conceptSource,mode,date,data?.meta.revision,detailRevision]);
  const rows=useMemo(()=>data?.rows.filter(r=>r.name.includes(query)||r.code.toLowerCase().includes(query.toLowerCase()))||[],[data,query]);
  const filtered=useMemo(()=>[...rows].sort((a,b)=>{const field=sort as keyof Sector;const av=a[field] as Nullable;const bv=b[field] as Nullable;return av==null?bv==null?0:1:bv==null?-1:bv-av;}),[rows,sort]);
@@ -145,7 +172,11 @@ function App(){
  ];
  const sentiByDate:Record<string,number>=Object.fromEntries(sentiCurve.map(r=>[r.date,r.score] as [string,number]));
  const boardsByDate:Record<string,{boards:number;names:string[]}>=Object.fromEntries(boardsCurve.map(r=>[r.date,r.tiers[0]] as [string,{boards:number;names:string[]}]));
+ const emoByDate:Record<string,{ice:number|null;climax:number|null;source:string}>=Object.fromEntries(emoCurve.map(r=>[r.date,{ice:r.ice,climax:r.climax,source:r.source}] as [string,{ice:number|null;climax:number|null;source:string}]));
  const curveDays=[...new Set([...sentiCurve.map(r=>r.date),...boardsCurve.map(r=>r.date)])].sort();
+ const emoDays=emoCurve.map(r=>r.date);
+ const emoLatest=[...emoCurve].reverse().find(r=>r.ice!=null||r.climax!=null)||null;
+ const poolRows=(leaderPerf?.pools.emotion??[]).slice(0,4);
  return <><DeskNav news={newsView} onNews={openNews}>{!newsView?<><div className="nav-date"><span>复盘日</span>
    <ArchivePicker label="交易日期" value={date} dates={options} emptyText={dateHint} snapshots={dates.snapshots.map(d=>d.trade_date)}
      shortcut={{label:dates.snapshots.length?'最新快照':'最新指数日',value:dates.snapshots[0]?.trade_date||options[0]||''}}
@@ -158,9 +189,26 @@ function App(){
    const index=market?.indices.find(i=>i.code===code);
    return <div key={code}><span>{name}</span><strong>{fmt(index?.price??null)}</strong><b className={color(index?.change??null)}>{index?pct(index.change):market?'未存档':'等待源数据'}</b></div>;
  })}</div>
- <SentimentStrip data={market?.sentiment??null} open={showCurve} onToggle={toggleCurve}/>
-
  <div className="metrics"><div className="metric wide"><span>市场成交额</span><strong>{amt(stats?.amount)}</strong><small>沪深 A 股 · 含 ST · 有效报价</small></div><div className="metric wide"><span>上涨 / 下跌</span><strong><b className="up">{fmt(stats?.up,0)}</b><em>/</em><b className="down">{fmt(stats?.down,0)}</b></strong><div className="breadth-track"><i style={{width:`${stats?.up_ratio??0}%`}}/></div><small>平盘 {fmt(stats?.flat,0)} · ST 涨 {fmt(stats?.st.up,0)} / 跌 {fmt(stats?.st.down,0)}</small></div><div className="metric"><span>{fullLimits?'涨停 / 跌停':'池中涨停 / 跌停'}</span><strong><b className="up">{fmt(fullLimits?stats?.quote_limit_up:emotion?.limit_up,0)}</b><em>/</em><b className="down">{fmt(fullLimits?stats?.quote_limit_down:emotion?.limit_down,0)}</b></strong><small>{fullLimits?'源涨跌停价判定 · 非ST':'供应商池覆盖 · 非ST'}</small></div><div className="metric"><span>炸板率</span><strong>{emotion?.broken_ratio==null?'—':`${fmt(emotion.broken_ratio,1)}%`}</strong><small>东财池：未封住 / 当日曾涨停</small></div><div className="metric clickable" onClick={toggleCurve} title={showCurve?'收起走势曲线':'点击查看走势'}><span>最高连板<em className="metric-hint">{showCurve?'收起 ↑':'走势 ↓'}</em></span><strong>{fmt(emotion?.max_boards,0)}<small>板</small></strong><small>东财池 · 非ST，科创板可能未收录</small></div></div>
+ <SentimentStrip data={market?.sentiment??null} open={showCurve} onToggle={toggleCurve}/>
+ <div className="emotion-cards">
+ <EmotionCard ice={emoLatest?.ice??null} climax={emoLatest?.climax??null} day={emoLatest?.date||''} iceHist={emoCurve.map(r=>r.ice).slice(-30)} cxHist={emoCurve.map(r=>r.climax).slice(-30)} open={showEmo} onToggle={toggleEmo}/>
+ <Leaders entry={<div className="emo-card pool-card" title="管理核心龙头股票池">
+  <div className="emo-card-head">
+   <span className="sentiment-label">龙头池<em className="sentiment-tag">情绪核心</em></span>
+   <span className="emo-card-meta">{leaderPerf?.date?`${leaderPerf.date.slice(5)} 收盘`:'涨幅随收盘归档更新'}</span>
+   <span className="sentiment-hint">管理 ↗</span>
+  </div>
+  {poolRows.length?<div className="pool-rows">{poolRows.map(s=><div key={s.code} className="pool-row">
+    <span className="pool-name">{s.name}<em>{s.code}</em></span>
+    <span className={`pool-d1 ${color(s.d1)}`}>{pct(s.d1)}</span>
+    <span className="pool-sub"><i>10日</i>{pct(s.d10)}</span>
+    <span className="pool-sub"><i>20日</i>{pct(s.d20)}</span>
+   </div>)}
+   {(leaderPerf?.pools.emotion.length??0)>4&&<div className="pool-more">还有 {(leaderPerf?.pools.emotion.length??0)-4} 只，点卡片查看全部</div>}
+  </div>:<div className="pool-empty"><strong>池子是空的</strong><span>评分暂用昨日连板股兜底，点我添加龙头股</span></div>}
+ </div>}/>
+ </div>
  {showCurve&&<section id="curve" className="breadth-card sentiment-curve"><h3>综合强度 × 最高板<em className="sentiment-tag">自研 + 涨停池</em></h3>
  <div className="curve-chips"><button className={`curve-chip${curveSel.senti?'':' off'}`} onClick={()=>toggleSel('senti')}><i className="dot" style={{background:'#b0523c'}}/>综合强度</button><button className={`curve-chip${curveSel.boards?'':' off'}`} onClick={()=>toggleSel('boards')}><i className="dot" style={{background:'#36583e'}}/>最高板</button></div>
  {sentiCurve.length>1||boardsCurve.length>1?<Chart height={300} option={{
@@ -188,6 +236,32 @@ function App(){
      data:curveDays.map(d=>{const t=boardsByDate[d];return t?{value:t.boards,boards:t.boards,names:t.names}:null;})
    }]:[])]}}/>:<Empty title="暂无曲线数据" text="等待连续交易日的市场快照与涨停池积累。"/>}
  <p className="footnote">自研近似算法（参考开盘啦五维度），非开盘啦官方数值 · 最高板取自每日涨停池，并列股票全部列出 · 池历史自系统上线起逐日积累</p></section>}
+ {showEmo&&<section id="emotion-curve" className="breadth-card sentiment-curve"><h3>冰点分 × 高潮分<em className="sentiment-tag">自研打分</em></h3>
+ {emoCurve.length>1?<Chart height={260} option={{
+   grid:{left:36,right:36,top:16,bottom:48},
+   dataZoom:[{type:'inside',startValue:Math.max(0,emoDays.length-60),endValue:emoDays.length-1,filterMode:'none'},
+     {type:'slider',height:16,bottom:6,startValue:Math.max(0,emoDays.length-60),endValue:emoDays.length-1,filterMode:'none',
+       borderColor:'transparent',backgroundColor:'rgba(54,88,62,.05)',fillerColor:'rgba(54,88,62,.12)',
+       handleStyle:{color:'#36583e'},moveHandleStyle:{color:'#36583e'},
+       dataBackground:{lineStyle:{color:'#c9cdc2'},areaStyle:{color:'rgba(54,88,62,.08)'}},
+       selectedDataBackground:{lineStyle:{color:'#36583e'},areaStyle:{color:'rgba(54,88,62,.14)'}},
+       textStyle:{fontSize:9,color:'#8b8d87'}}],
+   tooltip:{trigger:'axis',formatter:(ps:any)=>{const day=emoDays[ps[0]?.dataIndex]||'';const emo=emoByDate[day];const lines=ps.filter((p:any)=>p.data!=null&&p.value!=null).map((p:any)=>`${p.seriesName} <b>${p.value}</b>`);
+     return [day+(emo?.source==='kline'?'（日K近似回补）':''),...lines].join('<br/>');}},
+   xAxis:{type:'category',data:emoDays.map(d=>d.slice(5)),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8b8d87',fontSize:10}},
+   yAxis:{type:'value',min:0,minInterval:1,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{lineStyle:{color:'#eef0e8'}}},
+   series:[{name:'冰点分',type:'line' as const,smooth:true,symbol:'circle',symbolSize:5,connectNulls:false,
+     lineStyle:{width:2,color:'#4a7a9a'},itemStyle:{color:'#4a7a9a'},
+     areaStyle:{color:{type:'linear' as const,x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(74,122,154,.18)'},{offset:1,color:'rgba(74,122,154,0)'}]}},
+     label:{show:true,position:'top' as const,fontSize:9,color:'#4a7a9a',lineHeight:12,formatter:(p:any)=>p.value??''},
+     data:emoDays.map(d=>{const t=emoByDate[d];return t&&t.ice!=null?t.ice:null;})
+   },{name:'高潮分',type:'line' as const,smooth:true,symbol:'circle',symbolSize:5,connectNulls:false,
+     lineStyle:{width:2,color:'#c8842a'},itemStyle:{color:'#c8842a'},
+     areaStyle:{color:{type:'linear' as const,x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(200,132,42,.18)'},{offset:1,color:'rgba(200,132,42,0)'}]}},
+     label:{show:true,position:'bottom' as const,fontSize:9,color:'#c8842a',lineHeight:12,formatter:(p:any)=>p.value??''},
+     data:emoDays.map(d=>{const t=emoByDate[d];return t&&t.climax!=null?t.climax:null;})
+   }]}}/>:<Empty title="暂无打分数据" text="等待连续交易日的市场快照与涨停池积累。"/>}
+ <p className="footnote">冰点分越大情绪越冰，高潮分越大越极致火热 · 五维打分：广度/涨跌停/封板率/龙头/大面（冰点）与广度/涨停/龙头/最高板/封板率（高潮）· 龙头取「龙头池」情绪核心池，池空时用昨日连板股兜底 · 标注「日K近似回补」的日期为池数据缺失段（约两周前），由日 K 近似计算</p></section>}
  <div className="market-bento grid-flow-dense"><section className="breadth-card"><h3>涨跌分布</h3> {stats?<Chart height={150} option={{grid:{left:40,right:20,top:18,bottom:30},tooltip:{trigger:'axis'},xAxis:{type:'category',data:['<-7%','-7~-3%','-3~0%','平盘','0~3%','3~7%','≥7%']},yAxis:{type:'value',minInterval:1},series:[{type:'bar',label:{show:true,position:'top',fontSize:10,color:'#58675d'},data:stats.distribution.map((v,i)=>({value:v,itemStyle:{color:i<3?'#6da58f':i>3?'#ce887e':'#b9bcb3'}}))}]}}/>:<Empty title="暂无涨跌分布" text="等待该日市场广度快照。"/>}</section><NotesDeck notes={notes}/></div>
  <p className="footnote">指数 {market?.indices_meta?.source} · {timeText(market?.indices_meta?.source_time)} / 广度 {market?.meta.source} · {timeText(market?.meta.source_time)} · 情绪池源 {timeText(market?.emotion_meta.source_time)} / 采集 {timeText(market?.emotion_meta.collected_at)} · 收盘报价覆盖 {stats?.quote_coverage==null?'未知':`${fmt(stats.quote_coverage*100,1)}%`} · 有效交易占比 {stats?.coverage==null?'未知':`${fmt(stats.coverage*100,1)}%`}</p>
  </section>

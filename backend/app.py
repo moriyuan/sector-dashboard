@@ -42,6 +42,15 @@ def create_app(store=None, collect=True):
     from .backlog import router as backlog_router
     app.include_router(backlog_router(store))
 
+    from .leaders import router as leaders_router
+    app.include_router(leaders_router(store))
+
+    from . import emotion_score
+
+    @app.get('/api/emotion-score')
+    def get_emotion_score(limit: int = Query(250, ge=1, le=600)):
+        return {'rows': emotion_score.history(store, limit)}
+
     def date_value(value):
         if value:
             try:

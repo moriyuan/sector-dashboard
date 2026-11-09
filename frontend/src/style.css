@@ -41,3 +41,45 @@
 .curve-chip .dot{width:8px;height:8px;border-radius:50%;flex:none}
 .curve-chip.off{opacity:.42;border-style:dashed}
 .curve-chip:hover{border-color:#36583e}
+.emotion-strip{cursor:pointer}
+.emotion-strip .emotion-score{display:flex;align-items:baseline;gap:6px}
+.emotion-strip .emotion-score small{font-size:11px;color:#8b8d87}
+.emotion-strip .emotion-score strong{font-size:20px;font-weight:700}
+.emotion-strip .emotion-date{margin-left:auto;font-size:11px;color:#a3a69e}
+.emotion-strip .sentiment-hint{margin-left:12px}
+.emotion-strip{padding:8px 16px;margin:8px 0 10px}
+.emotion-strip .sentiment-label{font-size:12px}
+.emotion-strip .emotion-score strong{font-size:17px}
+.emotion-strip .emotion-leaders{display:flex;align-items:center;gap:6px;border:1px solid #dde3d6;background:#f7f8f4;border-radius:999px;padding:3px 12px;font-size:12px;color:#2c4a34;cursor:pointer;white-space:nowrap}
+.emotion-strip .emotion-leaders:hover{border-color:#36583e}
+.emotion-strip .emotion-leaders b{color:#b0523c}
+
+/* 情绪打分 × 龙头池 双卡片 */
+.emotion-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0 10px}
+@media (max-width:900px){.emotion-cards{grid-template-columns:1fr}}
+.emo-card{background:#fbfbf8;border:1px solid #e7ebdf;border-radius:14px;padding:12px 16px 14px;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease}
+.emo-card:hover{border-color:#36583e;box-shadow:0 4px 14px rgba(54,88,62,.08)}
+.emo-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.emo-card-head .sentiment-label{font-size:12px}
+.emo-card-meta{margin-left:auto;font-size:11px;color:#a3a69e}
+.emo-card-head .sentiment-hint{margin-left:0}
+.emo-card-body{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.emo-block{display:flex;flex-direction:column;gap:2px;min-width:0}
+.emo-block small{font-size:11px;color:#8b8d87}
+.emo-block strong{font-size:24px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+.spark{width:100%;height:34px;display:block;margin-top:4px}
+.spark-empty{background:repeating-linear-gradient(90deg,transparent 0 6px,rgba(139,141,135,.12) 6px 7px)}
+/* 龙头池卡 */
+.pool-rows{display:flex;flex-direction:column}
+.pool-row{display:flex;align-items:baseline;gap:10px;padding:6px 0;border-bottom:1px dashed #ecefe6}
+.pool-row:last-child{border-bottom:none}
+.pool-name{font-size:13px;font-weight:600;color:#303433;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38%}
+.pool-name em{font-style:normal;font-weight:400;font-size:11px;color:#a3a69e;margin-left:6px}
+.pool-d1{margin-left:auto;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.pool-sub{font-size:11px;color:#8b8d87;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pool-sub i{font-style:normal;color:#b6bab0;margin-right:3px}
+.pool-more{padding-top:6px;font-size:11px;color:#a3a69e;text-align:center}
+.pool-empty{display:flex;flex-direction:column;align-items:center;gap:4px;padding:18px 0 14px;color:#8b8d87}
+.pool-empty strong{font-size:13px;color:#6b6f66}
+.pool-empty span{font-size:11px}
+.leaders-entry-wrap{display:contents}
