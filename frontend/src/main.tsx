@@ -241,7 +241,7 @@ function App(){
        formatter:(p:any)=>p.data?.names?p.data.names.map((n:string)=>`${n}${p.data.boards}`).join('\n'):''},
      data:curveDays.map(d=>{const t=boardsByDate[d];return t?{value:t.boards,boards:t.boards,names:t.names}:null;})
    }]:[])]}}/>:<Empty title="暂无曲线数据" text="等待连续交易日的市场快照与涨停池积累。"/>}
- <p className="footnote">自研近似算法（参考开盘啦五维度），非开盘啦官方数值 · 最高板取自每日涨停池，并列股票全部列出 · 池历史自系统上线起逐日积累</p></section>}
+ <p className="footnote">自研近似算法（参考开盘啦五维度），非开盘啦官方数值 · 涨停表现维度近两周取池数据、更早日期按日K近似回补 · 量能带方向（放量下跌减分）· 高度含高位股群与绕异动加成 · 最高板取自每日涨停池，并列股票全部列出</p></section>}
  {showEmo&&<section id="emotion-curve" className="breadth-card sentiment-curve"><h3>冰点分 × 高潮分<em className="sentiment-tag">自研打分</em></h3>
  {emoCurve.length>1?<Chart height={260} option={{
    grid:{left:36,right:36,top:16,bottom:48},
