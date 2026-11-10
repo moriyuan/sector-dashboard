@@ -61,11 +61,15 @@ def test_ice_dims_kline(tmp_path):
     assert ice['leaders']['score'] == 2                          # 均跌-7.33→lerp 2.0，任一跌停 → 2 取大
     assert ice['leaders']['note'] == 'kline_streak'              # 池空 → 昨日连板兜底
     assert ice['drawdown']['score'] == 1.5                       # 15 只大面 → lerp(15)=1.5
-    assert row['ice'] == 7.5
+    assert ice['st_yday']['score'] == 2                          # 昨连板 3 只今日均跌 -7.33 → 封顶 2
+    assert ice['st_yday']['count'] == 3
+    assert 'lu_yday' not in ice                                  # 昨日涨停仅 3 只 <5 → 不记分
+    assert row['ice'] == 9.5
     clx = subs(row, 'climax')
     assert clx['breadth']['score'] == 0 and clx['limit_up']['score'] == 0
     assert clx['max_boards']['input'] == 0                       # D2 无涨停 → 连板重建为 0
     assert clx['promote']['input'] == 0.0                        # 昨日 3 只连板今日无一涨停
+    assert clx['st_yday']['score'] == 0                          # 均跌 -7.33 → 高潮侧 0 分
     assert row['climax'] == 0
     # ST/北交所不得计入：跌停恰为 13（12 只跌停股 + 龙头 600102；ST 与北交所被过滤）
     assert ice['limit_down']['input'] == 13
@@ -133,7 +137,7 @@ def test_emotion_score_endpoint_and_cache(tmp_path):
         dates = [r['date'] for r in data['rows']]
         assert dates == sorted(dates) and dates[-1] == D2
         r = data['rows'][-1]
-        assert r['ice'] == 7.5 and r['climax'] == 0 and r['source'] == 'kline'
+        assert r['ice'] == 9.5 and r['climax'] == 0 and r['source'] == 'kline'
         subs = r['subs']                                          # 维度明细随曲线输出
         assert [d['key'] for d in subs['ice']] and [d['key'] for d in subs['climax']]
         assert all('name' in d and 'score' in d for d in subs['ice'] + subs['climax'])
@@ -143,7 +147,7 @@ def test_emotion_score_endpoint_and_cache(tmp_path):
         store.save('market', D2, 'close', {'stats': {'up': 300, 'down': 4100, 'flat': 0}},
                    f'{D2}T15:30:00+08:00')
         fresh = c.get('/api/emotion-score').json()
-        assert fresh['rows'][-1]['ice'] == 9                     # 广度2 + 跌停3.5 + 龙头2 + 大面1.5（重算生效）
+        assert fresh['rows'][-1]['ice'] == 11                    # 广度2 + 跌停3.5 + 龙头2 + 大面1.5 + 昨连板今表现2（重算生效）
 
 
 def test_emotion_score_empty(tmp_path):
@@ -151,6 +155,60 @@ def test_emotion_score_empty(tmp_path):
     assert history(store, limit=10) == []
     with TestClient(create_app(store, collect=False)) as c:
         assert c.get('/api/emotion-score').json() == {'rows': []}
+
+
+def test_yday_perf_dims(tmp_path):
+    """昨涨停/昨连板今表现：正反馈记高潮、负反馈记冰点、样本门槛。"""
+    # 正向：D0 三只涨停（建立 streak），D1 八只涨停，D2 全体上涨
+    store = Store(tmp_path / 'a.db')
+    ups = [stk(f'6001{i:02d}', 10, 10) for i in range(10, 18)]     # 8 只涨停
+    save_day(store, D0, 2000, 2000, ups[:3])
+    save_day(store, D1, 2000, 2000, ups)
+    rows = [stk(f'6001{i:02d}', 4.5, 5) for i in range(10, 13)]    # 3 只连板股 +4.5
+    rows += [stk(f'6001{i:02d}', 3.5, 4) for i in range(13, 18)]   # 其余 5 只 +3.5
+    save_day(store, D2, 2000, 2000, rows)
+    clx = subs(full_rows(store)[D2], 'climax')
+    assert clx['lu_yday']['score'] == 2                            # 均值 3.875 → lerp 1.94 → 2.0
+    assert clx['lu_yday']['count'] == 8
+    assert clx['st_yday']['score'] == 2                            # 连板股均值 +4.5 → lerp 1.75，0.5 取整到 2
+    ice = subs(full_rows(store)[D2], 'ice')
+    assert ice['lu_yday']['score'] == 0 and ice['st_yday']['score'] == 0  # 上涨日记 0 分
+
+    # 负向：同样的昨日涨停/连板，次日全跌 -3%
+    store = Store(tmp_path / 'b.db')
+    save_day(store, D0, 2000, 2000, ups[:3])
+    save_day(store, D1, 2000, 2000, ups)
+    save_day(store, D2, 2000, 2000, [stk(f'6001{i:02d}', -3) for i in range(10, 18)])
+    ice = subs(full_rows(store)[D2], 'ice')
+    assert ice['lu_yday']['score'] == 2                            # 均值 -3 ≤ -2.5 → 封顶 2
+    assert ice['st_yday']['score'] == 2                            # 均值 -3 → lerp(3,[(0,1),(1.5,1.5),(3,2)])=2
+    clx = subs(full_rows(store)[D2], 'climax')
+    assert clx['lu_yday']['score'] == 0 and clx['st_yday']['score'] == 0
+
+
+def test_yday_perf_anchors():
+    """昨涨停/昨连板今表现的完整阶梯（用户拍板 2026-11-10）。"""
+    from backend.emotion_score import _climax_dims, _ice_dims
+
+    def clx(lu_avg, st_avg):
+        return {d['key']: d['score'] for d in _climax_dims(
+            None, None, None, '', 0,
+            yday={'lu': (lu_avg, 8), 'streak': (st_avg, 4)})}
+
+    assert clx(2, 3)['lu_yday'] == 0 and clx(2, 3)['st_yday'] == 0      # 恰在门槛 → 0
+    assert clx(2.2, 3.2)['lu_yday'] == 1 and clx(2.2, 3.2)['st_yday'] == 1
+    assert clx(2.6, 3.6)['lu_yday'] == 1.5                              # 2.6→1.3→取整1.5
+    assert clx(3.5, 4.5)['lu_yday'] == 2 and clx(3.5, 4.5)['st_yday'] == 2
+    assert clx(9, 9)['lu_yday'] == 2 and clx(9, 9)['st_yday'] == 2      # 右端钳制
+
+    def ice(lu_avg, st_avg):
+        return {d['key']: d['score'] for d in _ice_dims(
+            None, None, None, '', yday={'lu': (lu_avg, 8), 'streak': (st_avg, 4)})}
+
+    assert ice(0, 0)['lu_yday'] == 0 and ice(0, 0)['st_yday'] == 0      # ≥0 → 0
+    assert ice(-0.2, -0.2)['lu_yday'] == 1                              # <0% 即 1 分
+    assert ice(-1.75, -2)['lu_yday'] == 1.5 and ice(-1.75, -2)['st_yday'] == 1.5
+    assert ice(-3, -3)['lu_yday'] == 2 and ice(-3, -3)['st_yday'] == 2
 
 
 def test_lerp():

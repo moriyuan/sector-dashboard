@@ -1,10 +1,10 @@
-"""冰点分 / 高潮分 双打分体系（2026-11-09 平滑版，口径用户拍板）。
+"""冰点分 / 高潮分 双打分体系（2026-11-09 平滑版 + 2026-11-10 新增昨涨停/昨连板今表现维度，口径用户拍板）。
 
 冰点分越大市场情绪越差，高潮分越大市场越极致火热。
 打分方式：各维度在锚点间分段线性映射、按 0.5 取整（两端钳制）；
 缺维度置空不计入总分。
 
-冰点分（6 维，满分 19）
+冰点分（8 维，满分 23）
   1. 下跌广度：<3000→0；3000~3499→0.5；≥3500 起线性 3500/4000/4500/5000/5500 → 1~5
   2. 跌停个数：<10→0；10/20/30/40 → 1~4 线性；若跌停 > 涨停 +2，合计封顶 6
   3. 封板率：样本(涨停+炸板) <10→置空；70%→0，55%→2，区间线性
@@ -12,8 +12,10 @@
      平均跌幅 -5%→1、-8%→2 线性；任一跌停→2；取大
   5. 大面个数：(最高价-收盘价)/最高价 ≥10% 的股票数，10/20 → 1~2 线性
   6. 跌停放大：今日跌停 ÷ 近 5 日跌停均值（样本 ≥3 天且均值 >0），1.5/2 倍 → 1~2 线性
+  7. 昨涨停今表现：昨日涨停股今日均涨幅（样本 ≥5 只），<0%→1、-1.5%→1.5、-2.5%→2 线性
+  8. 昨连板今表现：昨日连板股（streak≥2）今日均涨幅（样本 ≥3 只），<0%→1、-1.5%→1.5、-3%→2 线性
 
-高潮分（7 维，满分 22）
+高潮分（9 维，满分 26）
   1. 上涨广度：<4000→0；4000/4334/4667/5000 → 1~4 线性
   2. 涨停个数：<65→0；65/80/95/110 → 1~4 线性；
      加成：涨停股成交额 ÷ 近 5 日均值（样本 ≥3 天且均值 >0），2/3 倍 → +1/+2 两档，
@@ -23,6 +25,8 @@
   5. 最高板：6/7/8/9+ 板 → 1/2/3/4
   6. 连板晋级率：昨日连板股（streak≥2，样本 ≥2 只）今日仍涨停比例，40%/60% → 1~2 线性
   7. 涨停放大：今日涨停 ÷ 近 5 日涨停均值（样本 ≥3 天且均值 >0），1.5/2 倍 → 1~2 线性
+  8. 昨涨停今表现：昨日涨停股今日均涨幅（样本 ≥5 只），>2%→1、>3%→1.5、>4%→2 线性
+  9. 昨连板今表现：昨日连板股（streak≥2）今日均涨幅（样本 ≥3 只），>3%→1、>4%→1.5、>5%→2 线性
 
 近两周（有 pools 快照）用池数据精确计；更早日期用日 K 近似回补，
 涨停/跌停按板块阈值近似（主板 9.8%、双创 19.8%、北交所 29.8%、ST 4.8%），
@@ -216,7 +220,37 @@ def _surge(today, prev5):
     return today / base, base
 
 
-def _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=None):
+def _yday_perf(store, date, rows, prev_streak):
+    """昨日涨停/连板股的今日均涨幅（赚钱效应/亏钱效应）。
+
+    昨日涨停名单按昨日 stocks 快照的日 K 近似口径（已过滤无涨跌幅限制异动），
+    昨日连板名单取 prev_streak 中 streak≥2 的股票；今日涨跌幅取今日有效报价。
+    返回 {'lu': (avg, n), 'streak': (avg, n)}，缺数据或样本为空对应项为 None。
+    """
+    if not rows:
+        return None
+    with store.connect() as db:
+        r = db.execute(
+            "SELECT MAX(trade_date) d FROM snapshots "
+            "WHERE kind='stocks' AND mode='close' AND trade_date<?", (date,)).fetchone()
+    if not r or not r['d']:
+        return None
+    prev_snap = store.snapshot('stocks', r['d'], 'close')
+    prev_rows = (prev_snap['payload'].get('rows') if prev_snap else None) or []
+    if not prev_rows:
+        return None
+    today = _valid_hs(rows)
+    out = {}
+    sealed = _kline_stats(prev_rows)['sealed_codes']
+    lu_changes = [today[c]['change'] for c in sealed if c in today]
+    out['lu'] = (round(sum(lu_changes) / len(lu_changes), 2), len(lu_changes)) if lu_changes else None
+    st_codes = [c for c, s in (prev_streak or {}).items() if s >= 2]
+    st_changes = [today[c]['change'] for c in st_codes if c in today]
+    out['streak'] = (round(sum(st_changes) / len(st_changes), 2), len(st_changes)) if st_changes else None
+    return out
+
+
+def _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=None, yday=None):
     dims = []
     if breadth:
         up_n, down_n = breadth
@@ -258,11 +292,24 @@ def _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=None):
         dd = boards['drawdown'] or 0
         s = 0 if dd <= 10 else _lerp(dd, [(10, 1), (20, 2)])
         dims.append({'key': 'drawdown', 'name': '大面个数', 'score': s, 'input': dd})
+    if yday:
+        if yday.get('lu'):
+            avg, n = yday['lu']
+            if n >= 5:
+                s = 0 if avg >= 0 else _lerp(-avg, [(0, 1), (1.5, 1.5), (2.5, 2)])
+                dims.append({'key': 'lu_yday', 'name': '昨涨停今表现', 'score': s,
+                             'input': avg, 'count': n})
+        if yday.get('streak'):
+            avg, n = yday['streak']
+            if n >= 3:
+                s = 0 if avg >= 0 else _lerp(-avg, [(0, 1), (1.5, 1.5), (3, 2)])
+                dims.append({'key': 'st_yday', 'name': '昨连板今表现', 'score': s,
+                             'input': avg, 'count': n})
     return dims
 
 
 def _climax_dims(breadth, boards, leaders, leaders_note, max_boards,
-                 promote=None, prev5_lu=None, prev5_lu_amount=None):
+                 promote=None, prev5_lu=None, prev5_lu_amount=None, yday=None):
     dims = []
     if breadth:
         up_n, _ = breadth
@@ -319,6 +366,19 @@ def _climax_dims(breadth, boards, leaders, leaders_note, max_boards,
         dims.append({'key': 'promote', 'name': '连板晋级率',
                      'score': 0 if rate <= 40 else _lerp(rate, [(40, 1), (60, 2)]),
                      'input': round(rate, 1), 'count': count})
+    if yday:
+        if yday.get('lu'):
+            avg, n = yday['lu']
+            if n >= 5:
+                s = 0 if avg <= 2 else _lerp(avg, [(2, 1), (3, 1.5), (4, 2)])
+                dims.append({'key': 'lu_yday', 'name': '昨涨停今表现', 'score': s,
+                             'input': avg, 'count': n})
+        if yday.get('streak'):
+            avg, n = yday['streak']
+            if n >= 3:
+                s = 0 if avg <= 3 else _lerp(avg, [(3, 1), (4, 1.5), (5, 2)])
+                dims.append({'key': 'st_yday', 'name': '昨连板今表现', 'score': s,
+                             'input': avg, 'count': n})
     return dims
 
 
@@ -370,10 +430,12 @@ def compute(store, date, prev_streak=None, today_streak=None, prev5=None):
     prev5_lu = [t[0] for t in (prev5 or [])]
     prev5_ld = [t[1] for t in (prev5 or [])]
     prev5_amt = [t[2] for t in (prev5 or []) if t[2] is not None]
-    ice_dims = _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=prev5_ld)
+    yday = _yday_perf(store, date, rows, prev_streak)
+    ice_dims = _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=prev5_ld,
+                         yday=yday)
     climax_dims = _climax_dims(breadth, boards, leaders, leaders_note, max_boards,
                                promote=promote, prev5_lu=prev5_lu,
-                               prev5_lu_amount=prev5_amt)
+                               prev5_lu_amount=prev5_amt, yday=yday)
     revision = 0
     msnap = store.snapshot('market', date, 'close')
     if msnap:
