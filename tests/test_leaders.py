@@ -67,6 +67,45 @@ def test_leaders_perf(tmp_path):
         assert data['pools']['trend'] == []                   # 空池返回空
 
 
+def test_leaders_note(tmp_path):
+    """个股属性：添加时填写、列表返回、PUT 修改、超长校验。"""
+    with client(tmp_path) as c:
+        r = c.post('/api/leaders', json={'pool': 'emotion', 'code': '002242', 'name': '九阳股份',
+                                         'note': '玄学抱团总龙头'})
+        assert r.json()['ok']
+        row = c.get('/api/leaders').json()['pools'][0]['rows'][0]
+        assert row['note'] == '玄学抱团总龙头'
+
+        assert c.put('/api/leaders/emotion/002242/note', json={'note': '短线情绪锚'}).json()['ok']
+        row = c.get('/api/leaders').json()['pools'][0]['rows'][0]
+        assert row['note'] == '短线情绪锚'
+        assert c.put('/api/leaders/emotion/002242/note', json={'note': ''}).json()['ok']  # 清空
+        assert c.get('/api/leaders').json()['pools'][0]['rows'][0]['note'] == ''
+
+        assert c.put('/api/leaders/emotion/600999/note', json={'note': 'x'}).status_code == 404
+        assert c.post('/api/leaders', json={'pool': 'emotion', 'code': '600001', 'name': '甲股',
+                                            'note': '长' * 31}).status_code == 422
+
+
+def test_stock_search(tmp_path):
+    """模糊搜索：拼音首字母前缀、代码前缀、名称子串；排序代码优先。"""
+    store = Store(tmp_path / 't.db')
+    store.save('stocks', '2026-11-09', 'close', {'rows': [
+        dict(code='002242', name='九阳股份', price=10.0, change=1.0, amount=1e6),
+        dict(code='600001', name='甲股份', price=10.0, change=1.0, amount=1e6),
+        dict(code='300999', name='九安医疗', price=10.0, change=1.0, amount=1e6),
+    ]}, '2026-11-09T15:00:00+08:00')
+    with TestClient(create_app(store, collect=False)) as c:
+        rows = c.get('/api/stocks/search?q=jygf').json()['rows']
+        assert rows and rows[0] == {'code': '002242', 'name': '九阳股份'}
+        rows = c.get('/api/stocks/search?q=0022').json()['rows']
+        assert rows[0]['code'] == '002242'
+        rows = c.get('/api/stocks/search?q=九安').json()['rows']
+        assert [r['code'] for r in rows] == ['300999']
+        assert c.get('/api/stocks/search?q=').json()['rows'] == []
+        assert c.get('/api/stocks/search?q=zzz').json()['rows'] == []
+
+
 def test_leaders_perf_short_history(tmp_path):
     store = Store(tmp_path / 't.db')
     for i, d in enumerate(['2026-11-04', '2026-11-05']):

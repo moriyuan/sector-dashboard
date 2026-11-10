@@ -132,7 +132,7 @@ function App(){
  const [kind,setKind]=useState('industry');const [conceptSource,setConceptSource]=useState('ths');const mode='close';const [date,setDate]=useState('');const [dates,setDates]=useState<Dates>({snapshots:[],history_dates:[]});
  const [data,setData]=useState<Listing|null>(null);const [market,setMarket]=useState<Market|null>(null);const [status,setStatus]=useState<Status|null>(null);const [error,setError]=useState('');const [loading,setLoading]=useState(true);const [refresh,setRefresh]=useState(0);const [sentiCurve,setSentiCurve]=useState<{date:string;score:number}[]>([]);
  const [boardsCurve,setBoardsCurve]=useState<{date:string;tiers:{boards:number;names:string[]}[]}[]>([]);const [showCurve,setShowCurve]=useState(false);const [curveSel,setCurveSel]=useState({senti:true,boards:true});
- const [emoCurve,setEmoCurve]=useState<{date:string;ice:number|null;climax:number|null;source:string}[]>([]);const [showEmo,setShowEmo]=useState(false);
+ const [emoCurve,setEmoCurve]=useState<{date:string;ice:number|null;climax:number|null;source:string;subs?:any}[]>([]);const [showEmo,setShowEmo]=useState(false);
  const [leaderPerf,setLeaderPerf]=useState<{date:string|null;pools:{emotion:{code:string;name:string;d1:number|null;d10:number|null;d20:number|null}[]}}|null>(null);
  const toggleCurve=()=>{const nv=!showCurve;setShowCurve(nv);if(nv)setTimeout(()=>document.getElementById('curve')?.scrollIntoView({behavior:'smooth',block:'center'}),80);};
  const toggleEmo=()=>{const nv=!showEmo;setShowEmo(nv);if(nv)setTimeout(()=>document.getElementById('emotion-curve')?.scrollIntoView({behavior:'smooth',block:'center'}),80);};
@@ -178,7 +178,7 @@ function App(){
  ];
  const sentiByDate:Record<string,number>=Object.fromEntries(sentiCurve.map(r=>[r.date,r.score] as [string,number]));
  const boardsByDate:Record<string,{boards:number;names:string[]}>=Object.fromEntries(boardsCurve.map(r=>[r.date,r.tiers[0]] as [string,{boards:number;names:string[]}]));
- const emoByDate:Record<string,{ice:number|null;climax:number|null;source:string}>=Object.fromEntries(emoCurve.map(r=>[r.date,{ice:r.ice,climax:r.climax,source:r.source}] as [string,{ice:number|null;climax:number|null;source:string}]));
+ const emoByDate:Record<string,{ice:number|null;climax:number|null;source:string;subs?:any}>=Object.fromEntries(emoCurve.map(r=>[r.date,{ice:r.ice,climax:r.climax,source:r.source,subs:r.subs}] as [string,{ice:number|null;climax:number|null;source:string;subs?:any}]));
  const curveDays=[...new Set([...sentiCurve.map(r=>r.date),...boardsCurve.map(r=>r.date)])].sort();
  const emoDays=emoCurve.map(r=>r.date);
  const emoLatest=[...emoCurve].reverse().find(r=>r.ice!=null||r.climax!=null)||null;
@@ -206,7 +206,7 @@ function App(){
    <span className="sentiment-hint">管理 ↗</span>
   </div>
   {poolRows.length?<div className="pool-rows">{poolRows.map(s=><div key={s.code} className="pool-row">
-    <span className="pool-name">{s.name}<em>{s.code}</em></span>
+    <span className="pool-name">{s.name}<em>{s.code}</em>{(s as any).note&&<i className="pool-note">{(s as any).note}</i>}</span>
     <span className={`pool-d1 ${color(s.d1)}`}>{pct(s.d1)}</span>
     <span className="pool-sub"><i>10日</i>{pct(s.d10)}</span>
     <span className="pool-sub"><i>20日</i>{pct(s.d20)}</span>
@@ -252,8 +252,21 @@ function App(){
        dataBackground:{lineStyle:{color:'#c9cdc2'},areaStyle:{color:'rgba(54,88,62,.08)'}},
        selectedDataBackground:{lineStyle:{color:'#36583e'},areaStyle:{color:'rgba(54,88,62,.14)'}},
        textStyle:{fontSize:9,color:'#8b8d87'}}],
-   tooltip:{trigger:'axis',formatter:(ps:any)=>{const day=emoDays[ps[0]?.dataIndex]||'';const emo=emoByDate[day];const lines=ps.filter((p:any)=>p.data!=null&&p.value!=null).map((p:any)=>`${p.seriesName} <b>${p.value}</b>`);
-     return [day+(emo?.source==='kline'?'（日K近似回补）':''),...lines].join('<br/>');}},
+   tooltip:{trigger:'axis',triggerOn:'mousemove|click',confine:true,formatter:(ps:any)=>{const day=emoDays[ps[0]?.dataIndex]||'';const emo=emoByDate[day];
+     const sect=(title:string,color:string,dims:any[])=>{
+       if(!dims?.length)return '';
+       const rows=dims.map((d:any)=>{
+         const bits=[d.input!=null?String(d.input):''];
+         if(d.key==='limit_up'&&d.lu_amount!=null)bits[0]=`${d.input}只·${d.lu_amount}亿`;
+         if(d.bonus)bits.push(`成交加成+${d.bonus}`);
+         if(d.amount_ratio!=null)bits.push(`${d.amount_ratio}×近5日均值`);
+         return `${d.name} <b>${d.score}</b>${bits.filter(Boolean).length?`（${bits.filter(Boolean).join('，')}）`:''}`;
+       });
+       return `<div style="margin-top:6px;line-height:1.7"><span style="color:${color};font-weight:600">${title}</span><br/>${rows.join('<br/>')}</div>`;
+     };
+     const head=[day+(emo?.source==='kline'?'（日K近似回补）':''),`冰点 <b>${emo?.ice??'—'}</b> · 高潮 <b>${emo?.climax??'—'}</b>`].join('<br/>');
+     const detail=[sect('冰点维度','#4a7a9a',emo?.subs?.ice),sect('高潮维度','#c8842a',emo?.subs?.climax)].filter(Boolean).join('');
+     return detail?`<div style="max-width:300px">${head}${detail}</div>`:head;}},
    xAxis:{type:'category',data:emoDays.map(d=>d.slice(5)),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8b8d87',fontSize:10}},
    yAxis:{type:'value',min:0,minInterval:1,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{lineStyle:{color:'#eef0e8'}}},
    series:[{name:'冰点分',type:'line' as const,smooth:true,symbol:'circle',symbolSize:5,connectNulls:false,
@@ -267,7 +280,7 @@ function App(){
      label:{show:true,position:'bottom' as const,fontSize:9,color:'#c8842a',lineHeight:12,formatter:(p:any)=>p.value??''},
      data:emoDays.map(d=>{const t=emoByDate[d];return t&&t.climax!=null?t.climax:null;})
    }]}}/>:<Empty title="暂无打分数据" text="等待连续交易日的市场快照与涨停池积累。"/>}
- <p className="footnote">冰点分越大情绪越冰，高潮分越大越极致火热 · 各维度分段线性平滑打分：冰点=广度/跌停/封板率/龙头/大面/跌停放大，高潮=广度/涨停（个数1~4分+成交额2/3倍于近5日均值再+1/+2，合计最高6）/封板率/龙头/最高板/连板晋级率/涨停放大 · 龙头取「龙头池」情绪核心池（≥3 只才记分），池空时用昨日连板股兜底 · 卡片标注相对近 60 日的分位 · 标注「日K近似回补」的日期为池数据缺失段（约两周前），由日 K 近似计算</p></section>}
+ <p className="footnote">冰点分越大情绪越冰，高潮分越大越极致火热 · 各维度分段线性平滑打分：冰点=广度/跌停/封板率/龙头/大面/跌停放大，高潮=广度/涨停（个数1~4分+成交额2/3倍于近5日均值再+1/+2，合计最高6）/封板率/龙头/最高板/连板晋级率/涨停放大 · 龙头取「龙头池」情绪核心池（≥3 只才记分），池空时用昨日连板股兜底 · 卡片标注相对近 60 日的分位 · 鼠标悬停/点击曲线可查看当日各维度得分明细 · 标注「日K近似回补」的日期为池数据缺失段（约两周前），由日 K 近似计算</p></section>}
  <div className="market-bento grid-flow-dense"><section className="breadth-card"><h3>涨跌分布</h3> {stats?<Chart height={150} option={{grid:{left:40,right:20,top:18,bottom:30},tooltip:{trigger:'axis'},xAxis:{type:'category',data:['<-7%','-7~-3%','-3~0%','平盘','0~3%','3~7%','≥7%']},yAxis:{type:'value',minInterval:1},series:[{type:'bar',label:{show:true,position:'top',fontSize:10,color:'#58675d'},data:stats.distribution.map((v,i)=>({value:v,itemStyle:{color:i<3?'#6da58f':i>3?'#ce887e':'#b9bcb3'}}))}]}}/>:<Empty title="暂无涨跌分布" text="等待该日市场广度快照。"/>}</section><NotesDeck notes={notes}/></div>
  <p className="footnote">指数 {market?.indices_meta?.source} · {timeText(market?.indices_meta?.source_time)} / 广度 {market?.meta.source} · {timeText(market?.meta.source_time)} · 情绪池源 {timeText(market?.emotion_meta.source_time)} / 采集 {timeText(market?.emotion_meta.collected_at)} · 收盘报价覆盖 {stats?.quote_coverage==null?'未知':`${fmt(stats.quote_coverage*100,1)}%`} · 有效交易占比 {stats?.coverage==null?'未知':`${fmt(stats.coverage*100,1)}%`}</p>
  </section>

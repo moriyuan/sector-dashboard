@@ -1,13 +1,15 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {Button,Input,Popconfirm,message} from 'antd';
 import {DetailDrawer} from './DeskUI';
 import './leaders.css';
 
-type Row={code:string;name:string;added_at:string};
+type Row={code:string;name:string;note:string;added_at:string};
 type Pool={pool:'emotion'|'trend';name:string;rows:Row[]};
 type Board={pools:Pool[]};
 type Perf={d1:number|null;d10:number|null;d20:number|null};
 type PerfBoard={date:string|null;pools:Record<'emotion'|'trend',(Row&Perf)[]>};
+type Hit={code:string;name:string};
+type UniRow={code:string;name:string;py:string};
 
 const POOL_HINT:Record<string,string>={
  emotion:'情绪核心：冰点分/高潮分的龙头维度取这里的股票，每日收盘后按池内涨跌幅计算。池空时用昨日连板股兜底。',
@@ -23,10 +25,15 @@ export default function Leaders({entry}:{entry?:React.ReactNode}){
  const [perf,setPerf]=useState<PerfBoard|null>(null);
  const [failed,setFailed]=useState(false);
  const [tab,setTab]=useState<'emotion'|'trend'>('emotion');
- const [code,setCode]=useState('');
- const [name,setName]=useState('');
+ const [query,setQuery]=useState('');
+ const [hits,setHits]=useState<Hit[]>([]);
+ const [sel,setSel]=useState<Hit|null>(null);
+ const [note,setNote]=useState('');
+ const [editCode,setEditCode]=useState<string|null>(null);
+ const [editVal,setEditVal]=useState('');
  const [busy,setBusy]=useState(false);
  const [msg,ctx]=message.useMessage();
+ const uniRef=useRef<UniRow[]|null>(null);
  const load=()=>{
    fetch('api/leaders').then(r=>{if(!r.ok)throw Error(String(r.status));return r.json();})
      .then((b:Board)=>{setBoard(b);setFailed(false);}).catch(()=>{setBoard(null);setFailed(true);});
@@ -34,6 +41,32 @@ export default function Leaders({entry}:{entry?:React.ReactNode}){
      .then((p:PerfBoard)=>setPerf(p)).catch(()=>setPerf(null));
  };
  useEffect(()=>{load();},[]);
+ // 模糊搜索：优先走服务端；静态预览下退化为本地名单检索
+ useEffect(()=>{
+   const q=query.trim();
+   if(!q||sel){setHits([]);return;}
+   const t=setTimeout(async()=>{
+     try{
+       const r=await fetch('api/stocks/search?q='+encodeURIComponent(q));
+       if(!r.ok)throw Error(String(r.status));
+       const d=await r.json();
+       setHits(d.rows||[]);
+     }catch{
+       try{
+         if(!uniRef.current){
+           const r=await fetch('demo-data/stock-universe.json');
+           uniRef.current=await r.json();
+         }
+         const uni=uniRef.current||[],lq=q.toLowerCase();
+         const cm=uni.filter(s=>s.code.startsWith(lq));
+         const pm=uni.filter(s=>!cm.includes(s)&&s.py.startsWith(lq));
+         const nm=uni.filter(s=>!cm.includes(s)&&!pm.includes(s)&&s.name.includes(q));
+         setHits([...cm,...pm,...nm].slice(0,10).map(s=>({code:s.code,name:s.name})));
+       }catch{setHits([]);}
+     }
+   },250);
+   return ()=>clearTimeout(t);
+ },[query,sel]);
  const mutate=async(url:string,body?:object,method='POST')=>{
    setBusy(true);
    try{
@@ -51,9 +84,13 @@ export default function Leaders({entry}:{entry?:React.ReactNode}){
    }finally{setBusy(false);}
  };
  const add=async()=>{
-   const c=code.trim(),n=name.trim();
-   if(!c||!n)return;
-   if(await mutate('api/leaders',{pool:tab,code:c,name:n})){setCode('');setName('');}
+   if(!sel)return;
+   if(await mutate('api/leaders',{pool:tab,code:sel.code,name:sel.name,note:note.trim()})){
+     setSel(null);setQuery('');setNote('');
+   }
+ };
+ const saveNote=async(r:Row)=>{
+   if(await mutate(`api/leaders/${tab}/${r.code}/note`,{note:editVal.trim()},'PUT'))setEditCode(null);
  };
  const pool=board?.pools.find(p=>p.pool===tab);
  const perfRows=perf?.pools?.[tab]||[];
@@ -72,11 +109,19 @@ export default function Leaders({entry}:{entry?:React.ReactNode}){
    </div>
    <p className="ld-hint">{POOL_HINT[tab]}</p>
    <div className="ld-add">
-    <Input placeholder="代码 6 位，如 600001" value={code} maxLength={6}
-      onChange={e=>setCode(e.target.value.replace(/\D/g,''))} disabled={busy} style={{width:150}}/>
-    <Input placeholder="名称，如 甲股" value={name} maxLength={12}
-      onChange={e=>setName(e.target.value)} onPressEnter={add} disabled={busy}/>
-    <Button type="primary" onClick={add} loading={busy} disabled={!/^\d{6}$/.test(code.trim())||!name.trim()}>添加</Button>
+    {sel?<span className="ld-sel"><b>{sel.name}</b><em>{sel.code}</em>
+      <a onClick={()=>{setSel(null);setQuery('');}} aria-label="取消选择">×</a></span>
+     :<div className="ld-search">
+      <Input placeholder="搜股票：拼音首字母/名称/代码，如 jygf" value={query} disabled={busy}
+        onChange={e=>setQuery(e.target.value)} allowClear/>
+      {!!hits.length&&<ul className="ld-hits">
+       {hits.map(h=><li key={h.code} onClick={()=>{setSel(h);setHits([]);}}>
+         <b>{h.name}</b><em>{h.code}</em></li>)}
+      </ul>}
+     </div>}
+    <Input placeholder="个股属性（选填），如 玄学抱团总龙头" value={note} maxLength={30} disabled={busy}
+      onChange={e=>setNote(e.target.value)} onPressEnter={add} style={{width:190}}/>
+    <Button type="primary" onClick={add} loading={busy} disabled={!sel}>添加</Button>
    </div>
    {failed&&<div className="empty"><strong>股票池读取失败</strong><p>本地服务暂不可用；静态预览中列表为演示数据，修改不会保存。</p></div>}
    {!failed&&pool&&<>
@@ -87,7 +132,17 @@ export default function Leaders({entry}:{entry?:React.ReactNode}){
     </div>}
     <ul className="ld-list">
      {pool.rows.map(r=>{const p=perfOf(r.code);return <li key={r.code} className={`ld-row ${tab}`}>
-      <div className="ld-id"><code>{r.code}</code><span className="ld-name">{r.name}</span>
+      <div className="ld-id"><code>{r.code}</code>
+       <div className="ld-nn"><span className="ld-name">{r.name}</span>
+        {editCode===r.code
+         ?<span className="ld-note-edit"><Input size="small" value={editVal} maxLength={30} autoFocus
+             placeholder="个股属性，留空清除"
+             onChange={e=>setEditVal(e.target.value)} onPressEnter={()=>saveNote(r)}/>
+           <Button size="small" type="link" onClick={()=>saveNote(r)} loading={busy}>存</Button>
+           <Button size="small" type="text" onClick={()=>setEditCode(null)}>取消</Button></span>
+         :<a className={`ld-note${r.note?'':' empty'}`} title="点击修改个股属性"
+             onClick={()=>{setEditCode(r.code);setEditVal(r.note||'');}}>{r.note||'＋属性'}</a>}
+       </div>
        <small>{r.added_at?.slice(0,10)} 加入</small></div>
       <div className="ld-perf">
        {[p?.d1,p?.d10,p?.d20].map((v,i)=><span key={i} className={pctCls(v??null)}>{pctText(v??null)}</span>)}

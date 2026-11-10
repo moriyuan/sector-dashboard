@@ -501,5 +501,13 @@ def history(store, limit=250):
             v = _lu_ld_of(row)
             if v is not None:
                 counts.append(v)
-    return [{'date': r['trade_date'], 'ice': r['ice'], 'climax': r['climax'],
-             'source': r['source']} for r in rows]
+    out = []
+    for r in rows:
+        item = {'date': r['trade_date'], 'ice': r['ice'], 'climax': r['climax'],
+                'source': r['source']}
+        try:
+            item['subs'] = json.loads(r['subs']) if r.get('subs') else None
+        except (ValueError, TypeError):
+            item['subs'] = None
+        out.append(item)
+    return out

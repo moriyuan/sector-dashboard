@@ -134,6 +134,9 @@ def test_emotion_score_endpoint_and_cache(tmp_path):
         assert dates == sorted(dates) and dates[-1] == D2
         r = data['rows'][-1]
         assert r['ice'] == 7.5 and r['climax'] == 0 and r['source'] == 'kline'
+        subs = r['subs']                                          # 维度明细随曲线输出
+        assert [d['key'] for d in subs['ice']] and [d['key'] for d in subs['climax']]
+        assert all('name' in d and 'score' in d for d in subs['ice'] + subs['climax'])
         again = c.get('/api/emotion-score').json()               # 缓存一致
         assert again == data
         # 市场快照更新（revision 变化）→ 重算
