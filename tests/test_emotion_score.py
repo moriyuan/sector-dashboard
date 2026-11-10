@@ -54,8 +54,8 @@ def test_ice_dims_kline(tmp_path):
     row = rows[D2]
     assert row['source'] == 'kline'
     ice = subs(row, 'ice')
-    assert ice['breadth']['score'] == 0.5                        # 3000~3499 → 0.5
-    assert ice['limit_down']['score'] == 3.5                     # 13 跌停→lerp 1.5，跌停>涨停 +2
+    assert ice['breadth']['score'] == 0.5                        # 3000~3599 → 0.5
+    assert ice['limit_down']['score'] == 2                       # 13 跌停 <15 → 0，跌停>涨停 +2
     assert 'seal_rate' not in ice                                # 样本(0 涨停+0 炸板)<10 → 置空
     assert 'ld_surge' not in ice                                 # 前 2 日跌停 0，样本 <3 天 → 缺失
     assert ice['leaders']['score'] == 2                          # 均跌-7.33→lerp 2.0，任一跌停 → 2 取大
@@ -64,7 +64,7 @@ def test_ice_dims_kline(tmp_path):
     assert ice['st_yday']['score'] == 2                          # 昨连板 3 只今日均跌 -7.33 → 封顶 2
     assert ice['st_yday']['count'] == 3
     assert 'lu_yday' not in ice                                  # 昨日涨停仅 3 只 <5 → 不记分
-    assert row['ice'] == 9.5
+    assert row['ice'] == 8
     clx = subs(row, 'climax')
     assert clx['breadth']['score'] == 0 and clx['limit_up']['score'] == 0
     assert clx['max_boards']['input'] == 0                       # D2 无涨停 → 连板重建为 0
@@ -96,18 +96,18 @@ def test_climax_dims_pool_mode(tmp_path):
     row = rows[D3]
     assert row['source'] == 'pool'
     clx = subs(row, 'climax')
-    assert clx['breadth']['score'] == 3                          # lerp(4600)∈[4334,4667] → 3.0
-    assert clx['limit_up']['score'] == 2                         # lerp(80)∈[65,84] → 2.0
+    assert clx['breadth']['score'] == 3                          # lerp(4600)∈[3800..5000] → 3.0
+    assert clx['limit_up']['score'] == 1.5                       # lerp(80)∈[70,85] → 1.67 → 1.5
     assert clx['seal_rate']['score'] == 2                        # 80/85=94.1 → 钳制 2
     assert clx['leaders']['score'] == 2                          # 池内均涨 6.33 → 钳制 2
     assert clx['leaders']['note'] == 'emotion_pool'
-    assert clx['max_boards']['score'] == 4                       # 9 板 → 9-5
+    assert clx['max_boards']['score'] == 4                       # 9 板 → 9-5（前序快照 <10 天，无异动加成）
     assert clx['lu_surge']['score'] == 2                         # 80 vs 前3日均 2 → 40 倍 → 钳制 2
     assert 'promote' not in clx                                  # D2 无涨停 → 昨日无连板 → 缺失
-    assert row['climax'] == 15
+    assert row['climax'] == 14.5
     ice = subs(row, 'ice')
-    assert ice['limit_down']['score'] == 0                       # 5 跌停 <10
-    assert ice['seal_rate']['score'] == 0                        # 94.1 ≥ 70
+    assert ice['limit_down']['score'] == 0                       # 5 跌停 <15
+    assert ice['seal_rate']['score'] == 0                        # 94.1 ≥ 66
     assert ice['leaders']['score'] == 0
     assert row['ice'] == 0
 
@@ -137,7 +137,7 @@ def test_emotion_score_endpoint_and_cache(tmp_path):
         dates = [r['date'] for r in data['rows']]
         assert dates == sorted(dates) and dates[-1] == D2
         r = data['rows'][-1]
-        assert r['ice'] == 9.5 and r['climax'] == 0 and r['source'] == 'kline'
+        assert r['ice'] == 8 and r['climax'] == 0 and r['source'] == 'kline'
         subs = r['subs']                                          # 维度明细随曲线输出
         assert [d['key'] for d in subs['ice']] and [d['key'] for d in subs['climax']]
         assert all('name' in d and 'score' in d for d in subs['ice'] + subs['climax'])
@@ -147,7 +147,7 @@ def test_emotion_score_endpoint_and_cache(tmp_path):
         store.save('market', D2, 'close', {'stats': {'up': 300, 'down': 4100, 'flat': 0}},
                    f'{D2}T15:30:00+08:00')
         fresh = c.get('/api/emotion-score').json()
-        assert fresh['rows'][-1]['ice'] == 11                    # 广度2 + 跌停3.5 + 龙头2 + 大面1.5 + 昨连板今表现2（重算生效）
+        assert fresh['rows'][-1]['ice'] == 9.5                   # 广度2 + 跌停2 + 龙头2 + 大面1.5 + 昨连板今表现2（重算生效）
 
 
 def test_emotion_score_empty(tmp_path):
@@ -310,7 +310,7 @@ def test_lu_amount_bonus_lerp():
 
 
 def test_limit_up_stacked_cap6(tmp_path):
-    """涨停维度：个数 100→3.5 叠加成交额加成 +2 = 5.5；合计上限 6。"""
+    """涨停维度：个数 100→3.0 叠加成交额加成 +2 = 5.0；合计上限 6。"""
     store = Store(tmp_path / 't.db')
     for d in (D0, D1, D2):
         save_day(store, d, 2000, 2000, [stk('600901', 10, 10, amount=1e8)])
@@ -323,4 +323,53 @@ def test_limit_up_stacked_cap6(tmp_path):
                f'{D3}T15:00:00+08:00')
     dim = subs(full_rows(store)[D3], 'climax')['limit_up']
     assert dim['bonus'] == 2                    # 4.5 亿 ÷ 近5日均 1 亿 = 4.5 倍 → +2
-    assert dim['score'] == 5.5                  # 3.5 + 2 叠加，未到 6 上限
+    assert dim['score'] == 5                    # 3.0 + 2 叠加，未到 6 上限
+
+
+def test_hi3_dim(tmp_path):
+    """高位股群：3 板及以上家数 5→1、7→2（用户拍板 2026-11-10）。"""
+    store = Store(tmp_path / 'a.db')
+    five = [stk(f'6008{i:02d}', 10, 10) for i in range(10, 15)]  # 5 只三连板
+    save_day(store, D0, 2000, 2000, five)
+    save_day(store, D1, 2000, 2000, five)
+    save_day(store, D2, 3000, 500, five)
+    clx = subs(full_rows(store)[D2], 'climax')
+    assert clx['hi3']['input'] == 5 and clx['hi3']['score'] == 1
+
+    store = Store(tmp_path / 'b.db')
+    seven = [stk(f'6008{i:02d}', 10, 10) for i in range(10, 17)]  # 7 只三连板
+    save_day(store, D0, 2000, 2000, seven)
+    save_day(store, D1, 2000, 2000, seven)
+    save_day(store, D2, 3000, 500, seven)
+    clx = subs(full_rows(store)[D2], 'climax')
+    assert clx['hi3']['input'] == 7 and clx['hi3']['score'] == 2
+
+
+def test_abnormal_height_bonus(tmp_path):
+    """绕异动高度：10 日涨幅 ≥100% 个股出现 → 最高板维度 +1；未触发 → 不加（用户拍板 2026-11-10）。"""
+    # 触发：600111 前 12 天价格 50 元，D3 回到 100 元 → 10 日涨幅 100%
+    store = Store(tmp_path / 'a.db')
+    prior = [f'2026-10-{d:02d}' for d in range(18, 32)]           # 14 个前序快照日
+    for d in prior:
+        save_day(store, d, 2000, 2000, [stk('600111', -50)])      # price=50
+    save_day(store, D0, 2000, 2000, [stk('600111', 0)])           # price=100
+    clx = subs(full_rows(store)[D0], 'climax')
+    mb = clx['max_boards']
+    assert mb['input'] == 0                                       # 当日无涨停 → 阶梯 0 分
+    assert mb['abnormal'] >= 1 and mb['bonus'] == 1
+    assert mb['score'] == 1                                       # 0 + 异动加成 1
+
+    # 未触发：D0 价格 91 元（10 日涨幅 82% <100%）→ 无加成
+    store = Store(tmp_path / 'b.db')
+    for d in prior:
+        save_day(store, d, 2000, 2000, [stk('600111', -50)])
+    save_day(store, D0, 2000, 2000, [stk('600111', -9)])          # price=91
+    mb = subs(full_rows(store)[D0], 'climax')['max_boards']
+    assert mb['score'] == 0 and 'bonus' not in mb
+
+    # 前序快照不足 10 天 → 异动检测不生效（不报错、不加成）
+    store = Store(tmp_path / 'c.db')
+    save_day(store, D0, 2000, 2000, [stk('600111', -50)])
+    save_day(store, D1, 2000, 2000, [stk('600111', 0)])
+    mb = subs(full_rows(store)[D1], 'climax')['max_boards']
+    assert mb['score'] == 0 and 'bonus' not in mb

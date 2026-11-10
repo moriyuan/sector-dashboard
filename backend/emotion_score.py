@@ -1,32 +1,34 @@
-"""冰点分 / 高潮分 双打分体系（2026-11-09 平滑版 + 2026-11-10 新增昨涨停/昨连板今表现维度，口径用户拍板）。
+"""冰点分 / 高潮分 双打分体系（2026-11-10 数据驱动全维度重校准，口径用户拍板）。
 
 冰点分越大市场情绪越差，高潮分越大市场越极致火热。
 打分方式：各维度在锚点间分段线性映射、按 0.5 取整（两端钳制）；
-缺维度置空不计入总分。
+缺维度置空不计入总分。锚点经 126 个交易日真实数据分位数校准（2026-11-10）。
 
-冰点分（8 维，满分 23）
-  1. 下跌广度：<3000→0；3000~3499→0.5；≥3500 起线性 3500/4000/4500/5000/5500 → 1~5
-  2. 跌停个数：<10→0；10/20/30/40 → 1~4 线性；若跌停 > 涨停 +2，合计封顶 6
-  3. 封板率：样本(涨停+炸板) <10→置空；70%→0，55%→2，区间线性
+冰点分（8 维，满分 24）
+  1. 下跌广度：<3000→0；3000~3599→0.5；≥3600 起线性 3600/4000/4400/4800/5000 → 1~5
+  2. 跌停个数：<15→0；15/25/40/60 → 1~4 线性；若跌停 > 涨停 +2，合计封顶 6
+  3. 封板率：样本(涨停+炸板) <10→置空；66%→0，58%→1，50%→2，区间线性
   4. 龙头表现：情绪核心池非空→池内股票；池空→昨日 K 线连板股；样本 ≥3 只才记分。
      平均跌幅 -5%→1、-8%→2 线性；任一跌停→2；取大
-  5. 大面个数：(最高价-收盘价)/最高价 ≥10% 的股票数，10/20 → 1~2 线性
-  6. 跌停放大：今日跌停 ÷ 近 5 日跌停均值（样本 ≥3 天且均值 >0），1.5/2 倍 → 1~2 线性
+  5. 大面个数：(最高价-收盘价)/最高价 ≥10% 的股票数，10/20/40 → 1~3 线性
+  6. 跌停放大：今日跌停 ÷ 近 5 日跌停均值（样本 ≥3 天且均值 >0），1.8/3 倍 → 1~2 线性
   7. 昨涨停今表现：昨日涨停股今日均涨幅（样本 ≥5 只），<0%→1、-1.5%→1.5、-2.5%→2 线性
   8. 昨连板今表现：昨日连板股（streak≥2）今日均涨幅（样本 ≥3 只），<0%→1、-1.5%→1.5、-3%→2 线性
 
-高潮分（9 维，满分 26）
-  1. 上涨广度：<4000→0；4000/4334/4667/5000 → 1~4 线性
-  2. 涨停个数：<65→0；65/80/95/110 → 1~4 线性；
+高潮分（10 维，满分 29）
+  1. 上涨广度：<3800→0；3800/4200/4600/5000 → 1~4 线性
+  2. 涨停个数：<70→0；70/85/100/115 → 1~4 线性；
      加成：涨停股成交额 ÷ 近 5 日均值（样本 ≥3 天且均值 >0），2/3 倍 → +1/+2 两档，
      叠加在个数分上，本维合计最高 6（用户拍板 2026-11-09）
-  3. 封板率：样本 <10→置空；82%→1，86%→2，区间线性
+  3. 封板率：样本 <10→置空；80%→1，85%→2，区间线性
   4. 龙头表现：同一批龙头，样本 ≥3 只才记分；均涨 3%→1、6%→2 线性
-  5. 最高板：6/7/8/9+ 板 → 1/2/3/4
-  6. 连板晋级率：昨日连板股（streak≥2，样本 ≥2 只）今日仍涨停比例，40%/60% → 1~2 线性
-  7. 涨停放大：今日涨停 ÷ 近 5 日涨停均值（样本 ≥3 天且均值 >0），1.5/2 倍 → 1~2 线性
-  8. 昨涨停今表现：昨日涨停股今日均涨幅（样本 ≥5 只），>2%→1、>3%→1.5、>4%→2 线性
-  9. 昨连板今表现：昨日连板股（streak≥2）今日均涨幅（样本 ≥3 只），>3%→1、>4%→1.5、>5%→2 线性
+  5. 最高板：6/7/8/9+ 板 → 1/2/3/4；当日出现绕异动高度股
+     （10 日涨幅 ≥100% 或 30 日涨幅 ≥200%）额外 +1，本维合计最高 5
+  6. 高位股群：当日 3 板及以上家数（K 线连板重建），5 家→1、7 家→2 线性
+  7. 连板晋级率：昨日连板股（streak≥2，样本 ≥2 只）今日仍涨停比例，45%/60% → 1~2 线性
+  8. 涨停放大：今日涨停 ÷ 近 5 日涨停均值（样本 ≥3 天且均值 >0），1.3/1.7 倍 → 1~2 线性
+  9. 昨涨停今表现：昨日涨停股今日均涨幅（样本 ≥5 只），>2%→1、>3%→1.5、>4%→2 线性
+ 10. 昨连板今表现：昨日连板股（streak≥2）今日均涨幅（样本 ≥3 只），>3%→1、>4%→1.5、>5%→2 线性
 
 近两周（有 pools 快照）用池数据精确计；更早日期用日 K 近似回补，
 涨停/跌停按板块阈值近似（主板 9.8%、双创 19.8%、北交所 29.8%、ST 4.8%），
@@ -250,6 +252,38 @@ def _yday_perf(store, date, rows, prev_streak):
     return out
 
 
+def _abnormal_height(store, date, rows):
+    """绕异动高度股家数：当日存在 10 日涨幅 ≥100% 或 30 日涨幅 ≥200% 的个股。
+
+    监管严、连板高度难拓开时，资金常用「断板走趋势」绕开异动监管线打高度，
+    这类票是高度的替代信号。基准日为前第 10 / 第 30 个收盘日（stocks 快照）。
+    数据不足（前序快照 <10 天）返回 0。
+    """
+    if not rows:
+        return 0
+    with store.connect() as db:
+        prev_days = [r['trade_date'] for r in db.execute(
+            "SELECT DISTINCT trade_date FROM snapshots "
+            "WHERE kind='stocks' AND mode='close' AND trade_date<? "
+            "ORDER BY trade_date DESC LIMIT 30", (date,)).fetchall()]
+    if len(prev_days) < 10:
+        return 0
+    # 今日侧排除无涨跌幅限制的异动行（新股/复牌首日暴涨不是绕异动高度）
+    today_px = {r['code']: r['price'] for r in rows if r.get('price') and not _no_limit(r)}
+
+    def _px_map(day):
+        snap = store.snapshot('stocks', day, 'close')
+        prows = (snap['payload'].get('rows') if snap else None) or []
+        return {r['code']: r['price'] for r in prows if r.get('price')}
+
+    d10 = _px_map(prev_days[9])
+    hit = {c for c, p in today_px.items() if d10.get(c) and p / d10[c] - 1 >= 1.0}
+    if len(prev_days) >= 30:
+        d30 = _px_map(prev_days[29])
+        hit |= {c for c, p in today_px.items() if d30.get(c) and p / d30[c] - 1 >= 2.0}
+    return len(hit)
+
+
 def _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=None, yday=None):
     dims = []
     if breadth:
@@ -257,14 +291,14 @@ def _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=None, yday=None):
         n = down_n or 0
         if n < 3000:
             s = 0
-        elif n < 3500:
+        elif n < 3600:
             s = 0.5
         else:
-            s = _lerp(n, [(3500, 1), (4000, 2), (4500, 3), (5000, 4), (5500, 5)])
+            s = _lerp(n, [(3600, 1), (4000, 2), (4400, 3), (4800, 4), (5000, 5)])
         dims.append({'key': 'breadth', 'name': '下跌广度', 'score': s, 'input': n})
     if boards:
         lu, ld, broken = boards['limit_up'], boards['limit_down'], boards['broken']
-        s = 0 if ld < 10 else _lerp(ld, [(10, 1), (20, 2), (30, 3), (40, 4)])
+        s = 0 if ld < 15 else _lerp(ld, [(15, 1), (25, 2), (40, 3), (60, 4)])
         bonus = 2 if ld > lu else 0
         dims.append({'key': 'limit_down', 'name': '跌停个数', 'score': min(s + bonus, 6),
                      'input': ld, 'bonus': bonus})
@@ -272,12 +306,12 @@ def _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=None, yday=None):
         if sample >= 10:
             rate = lu / sample * 100
             dims.append({'key': 'seal_rate', 'name': '封板率(冰)',
-                         'score': _lerp(rate, [(55, 2), (62.5, 1), (70, 0)]),
+                         'score': _lerp(rate, [(50, 2), (58, 1), (66, 0)]),
                          'input': round(rate, 1)})
         surge = _surge(ld, prev5_ld)
         if surge:
             ratio, base = surge
-            s = 0 if ratio <= 1.5 else _lerp(ratio, [(1.5, 1), (2, 2)])
+            s = 0 if ratio <= 1.8 else _lerp(ratio, [(1.8, 1), (3, 2)])
             dims.append({'key': 'ld_surge', 'name': '跌停放大', 'score': s,
                          'input': round(ratio, 2), 'base': round(base, 1)})
     if leaders is not None:
@@ -290,7 +324,7 @@ def _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=None, yday=None):
                          'input': round(avg, 2), 'count': len(changes), 'note': leaders_note})
     if boards:
         dd = boards['drawdown'] or 0
-        s = 0 if dd <= 10 else _lerp(dd, [(10, 1), (20, 2)])
+        s = 0 if dd <= 10 else _lerp(dd, [(10, 1), (20, 2), (40, 3)])
         dims.append({'key': 'drawdown', 'name': '大面个数', 'score': s, 'input': dd})
     if yday:
         if yday.get('lu'):
@@ -309,18 +343,17 @@ def _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=None, yday=None):
 
 
 def _climax_dims(breadth, boards, leaders, leaders_note, max_boards,
-                 promote=None, prev5_lu=None, prev5_lu_amount=None, yday=None):
+                 promote=None, prev5_lu=None, prev5_lu_amount=None, yday=None,
+                 abnormal=None, hi3=None):
     dims = []
     if breadth:
         up_n, _ = breadth
         n = up_n or 0
-        # 用户拍板档位 4000/4334/4667/5000 → 1~4 线性，<4000→0，>5000 封顶 4
-        s = 0 if n < 4000 else _lerp(n, [(4000, 1), (4334, 2), (4667, 3), (5000, 4)])
+        s = 0 if n < 3800 else _lerp(n, [(3800, 1), (4200, 2), (4600, 3), (5000, 4)])
         dims.append({'key': 'breadth', 'name': '上涨广度', 'score': s, 'input': n})
     if boards:
         lu, broken = boards['limit_up'], boards['broken']
-        # 65 起步，80 / 95 / 110 → 1~4 线性，超过 110 封顶 4
-        s = 0 if lu < 65 else _lerp(lu, [(65, 1), (80, 2), (95, 3), (110, 4)])
+        s = 0 if lu < 70 else _lerp(lu, [(70, 1), (85, 2), (100, 3), (115, 4)])
         dim = {'key': 'limit_up', 'name': '涨停个数', 'score': s, 'input': lu}
         # 成交额加成：今日涨停股成交额 ÷ 近 5 日均值，2/3 倍 → +1/+2 两档，
         # 叠加在个数分上，本维合计最高 6（用户拍板 2026-11-09）
@@ -342,12 +375,12 @@ def _climax_dims(breadth, boards, leaders, leaders_note, max_boards,
         if sample >= 10:
             rate = lu / sample * 100
             dims.append({'key': 'seal_rate', 'name': '封板率(潮)',
-                         'score': 0 if rate <= 82 else _lerp(rate, [(82, 1), (86, 2)]),
+                         'score': 0 if rate <= 80 else _lerp(rate, [(80, 1), (85, 2)]),
                          'input': round(rate, 1)})
         surge = _surge(lu, prev5_lu)
         if surge:
             ratio, base = surge
-            s = 0 if ratio <= 1.5 else _lerp(ratio, [(1.5, 1), (2, 2)])
+            s = 0 if ratio <= 1.3 else _lerp(ratio, [(1.3, 1), (1.7, 2)])
             dims.append({'key': 'lu_surge', 'name': '涨停放大', 'score': s,
                          'input': round(ratio, 2), 'base': round(base, 1)})
     if leaders is not None:
@@ -358,13 +391,26 @@ def _climax_dims(breadth, boards, leaders, leaders_note, max_boards,
             dims.append({'key': 'leaders', 'name': '龙头表现(潮)', 'score': s,
                          'input': round(avg, 2), 'count': len(changes), 'note': leaders_note})
     if max_boards is not None:
-        # 6 板起步，6 / 7 / 8 / 9+ 四档（整数保持阶梯）
+        # 6 板起步，6 / 7 / 8 / 9+ 四档（整数保持阶梯）；
+        # 绕异动高度（10 日 ≥100% 或 30 日 ≥200% 个股出现）额外 +1，合计封顶 5
         s = 0 if max_boards < 6 else min(max_boards - 5, 4)
-        dims.append({'key': 'max_boards', 'name': '最高板', 'score': s, 'input': max_boards})
+        dim = {'key': 'max_boards', 'name': '最高板', 'input': max_boards}
+        bonus = 1 if abnormal else 0
+        if abnormal:
+            dim['abnormal'] = abnormal
+        if bonus:
+            dim['bonus'] = bonus
+        dim['score'] = min(s + bonus, 5)
+        dims.append(dim)
+    if hi3 is not None:
+        # 高位股群：当日 3 板及以上家数，5 家→1、7 家→2 线性
+        dims.append({'key': 'hi3', 'name': '高位股群',
+                     'score': 0 if hi3 < 5 else _lerp(hi3, [(5, 1), (7, 2)]),
+                     'input': hi3})
     if promote:
         rate, count = promote
         dims.append({'key': 'promote', 'name': '连板晋级率',
-                     'score': 0 if rate <= 40 else _lerp(rate, [(40, 1), (60, 2)]),
+                     'score': 0 if rate <= 45 else _lerp(rate, [(45, 1), (60, 2)]),
                      'input': round(rate, 1), 'count': count})
     if yday:
         if yday.get('lu'):
@@ -431,11 +477,16 @@ def compute(store, date, prev_streak=None, today_streak=None, prev5=None):
     prev5_ld = [t[1] for t in (prev5 or [])]
     prev5_amt = [t[2] for t in (prev5 or []) if t[2] is not None]
     yday = _yday_perf(store, date, rows, prev_streak)
+    abnormal = _abnormal_height(store, date, rows)
+    hi3 = None
+    if today_streak is not None:
+        hi3 = sum(1 for s in today_streak.values() if s >= 3)
     ice_dims = _ice_dims(breadth, boards, leaders, leaders_note, prev5_ld=prev5_ld,
                          yday=yday)
     climax_dims = _climax_dims(breadth, boards, leaders, leaders_note, max_boards,
                                promote=promote, prev5_lu=prev5_lu,
-                               prev5_lu_amount=prev5_amt, yday=yday)
+                               prev5_lu_amount=prev5_amt, yday=yday,
+                               abnormal=abnormal, hi3=hi3)
     revision = 0
     msnap = store.snapshot('market', date, 'close')
     if msnap:

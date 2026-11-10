@@ -258,7 +258,9 @@ function App(){
        const rows=dims.map((d:any)=>{
          const bits=[d.input!=null?String(d.input):''];
          if(d.key==='limit_up'&&d.lu_amount!=null)bits[0]=`${d.input}只·${d.lu_amount}亿`;
-         if(d.bonus)bits.push(`成交加成+${d.bonus}`);
+         if(d.bonus)bits.push(d.key==='max_boards'?`异动加成+${d.bonus}`:`成交加成+${d.bonus}`);
+         if(d.key==='max_boards'&&d.abnormal)bits.push(`绕异动高度${d.abnormal}只`);
+         if(d.key==='hi3')bits[0]=`${d.input}只3板+`;
          if(d.amount_ratio!=null)bits.push(`${d.amount_ratio}×近5日均值`);
          return `${d.name} <b>${d.score}</b>${bits.filter(Boolean).length?`（${bits.filter(Boolean).join('，')}）`:''}`;
        });
@@ -280,7 +282,7 @@ function App(){
      label:{show:true,position:'bottom' as const,fontSize:9,color:'#c8842a',lineHeight:12,formatter:(p:any)=>p.value??''},
      data:emoDays.map(d=>{const t=emoByDate[d];return t&&t.climax!=null?t.climax:null;})
    }]}}/>:<Empty title="暂无打分数据" text="等待连续交易日的市场快照与涨停池积累。"/>}
- <p className="footnote">冰点分越大情绪越冰，高潮分越大越极致火热 · 各维度分段线性平滑打分：冰点=广度/跌停/封板率/龙头/大面/跌停放大/昨涨停今表现/昨连板今表现，高潮=广度/涨停（个数1~4分+成交额2/3倍于近5日均值再+1/+2，合计最高6）/封板率/龙头/最高板/连板晋级率/涨停放大/昨涨停今表现/昨连板今表现 · 龙头取「龙头池」情绪核心池（≥3 只才记分），池空时用昨日连板股兜底 · 卡片标注相对近 60 日的分位 · 鼠标悬停/点击曲线可查看当日各维度得分明细 · 标注「日K近似回补」的日期为池数据缺失段（约两周前），由日 K 近似计算</p></section>}
+ <p className="footnote">冰点分越大情绪越冰，高潮分越大越极致火热 · 各维度分段线性平滑打分（锚点经历史数据分位数校准 2026-11-10）：冰点=广度/跌停/封板率/龙头/大面/跌停放大/昨涨停今表现/昨连板今表现，高潮=广度/涨停（个数1~4分+成交额2/3倍于近5日均值再+1/+2，合计最高6）/封板率/龙头/最高板（6/7/8/9+板，出现10日涨幅≥100%或30日≥200%的绕异动高度股再+1）/高位股群（3板及以上家数）/连板晋级率/涨停放大/昨涨停今表现/昨连板今表现 · 龙头取「龙头池」情绪核心池（≥3 只才记分），池空时用昨日连板股兜底 · 卡片标注相对近 60 日的分位 · 鼠标悬停/点击曲线可查看当日各维度得分明细 · 标注「日K近似回补」的日期为池数据缺失段（约两周前），由日 K 近似计算</p></section>}
  <div className="market-bento grid-flow-dense"><section className="breadth-card"><h3>涨跌分布</h3> {stats?<Chart height={150} option={{grid:{left:40,right:20,top:18,bottom:30},tooltip:{trigger:'axis'},xAxis:{type:'category',data:['<-7%','-7~-3%','-3~0%','平盘','0~3%','3~7%','≥7%']},yAxis:{type:'value',minInterval:1},series:[{type:'bar',label:{show:true,position:'top',fontSize:10,color:'#58675d'},data:stats.distribution.map((v,i)=>({value:v,itemStyle:{color:i<3?'#6da58f':i>3?'#ce887e':'#b9bcb3'}}))}]}}/>:<Empty title="暂无涨跌分布" text="等待该日市场广度快照。"/>}</section><NotesDeck notes={notes}/></div>
  <p className="footnote">指数 {market?.indices_meta?.source} · {timeText(market?.indices_meta?.source_time)} / 广度 {market?.meta.source} · {timeText(market?.meta.source_time)} · 情绪池源 {timeText(market?.emotion_meta.source_time)} / 采集 {timeText(market?.emotion_meta.collected_at)} · 收盘报价覆盖 {stats?.quote_coverage==null?'未知':`${fmt(stats.quote_coverage*100,1)}%`} · 有效交易占比 {stats?.coverage==null?'未知':`${fmt(stats.coverage*100,1)}%`}</p>
  </section>
