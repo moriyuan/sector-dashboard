@@ -101,7 +101,7 @@ def create_app(store=None, collect=True):
     @app.get('/api/boards-history')
     def boards_history(limit:int=Query(60,ge=1,le=250)):
         from .boards import history
-        return {'rows':history(store,limit),'note':'每日涨停池最高连板及股票名单'}
+        return {'rows':history(store,limit),'note':'每日涨停池最高连板及股票名单；约两周前池数据缺失段按日K近似回补（source=kline）'}
 
     @app.get('/api/sectors')
     def sectors(kind:Literal['industry','concept']='industry',date:str|None=None,mode:Literal['close']='close',revision:int|None=None,

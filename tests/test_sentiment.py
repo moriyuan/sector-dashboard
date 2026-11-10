@@ -159,3 +159,15 @@ def test_sentiment_limit_yday_feedback(tmp_path):
     lim2 = {x['key']: x for x in s2['subs']}['limit']
     assert lim2['inputs']['lu_yday'] == -4
     assert lim['score'] - lim2['score'] > 15                          # 赚钱效应拉开差距（当日无涨停，维度分由赚钱效应主导）
+
+
+def test_streak_pair_bridges_weekend(tmp_path):
+    """daily 口径连板跨周末延续（修复自然日 span 周末清零导致周一/周二高度维度失真的缺陷）。"""
+    from backend.sentiment import _streak_pair
+    store = Store(tmp_path / 't.db')
+    rows = [{'code': '600001', 'name': '甲股份', 'change': 10.0,
+             'price': 10.0, 'high': 10.0, 'amount': 1e8}]
+    store.save('stocks', '2026-11-06', 'close', {'rows': rows})  # 周五首板
+    store.save('stocks', '2026-11-09', 'close', {'rows': rows})  # 周一再板
+    prev, today = _streak_pair(store, '2026-11-09')
+    assert today['600001'] == 2 and prev['600001'] == 1  # 跨周末连板不清零

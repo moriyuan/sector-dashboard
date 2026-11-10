@@ -10,10 +10,9 @@
 - 权重表现：全部指数涨跌幅的中位数（不再只看上证）。
 纪律：任一维度输入缺失时该维度留空（None），剩余维度按权重重新归一，绝不编造。"""
 import math
-from datetime import datetime, timedelta
 
-from .emotion_score import (STREAK_DAYS, _abnormal_height, _kline_stats,
-                            _streaks, _yday_perf)
+from .emotion_score import (_abnormal_height, _kline_stats,
+                            _streak_span, _streaks, _yday_perf)
 
 WEIGHTS = {'breadth': 0.25, 'volume': 0.20, 'limit': 0.25, 'drawdown': 0.15, 'index': 0.15}
 SUB_NAMES = {'breadth': '涨跌广度', 'volume': '市场量能', 'limit': '涨停表现', 'drawdown': '大幅回撤', 'index': '权重表现'}
@@ -193,11 +192,11 @@ def _ensure_table(db):
 
 
 def _streak_pair(store, date):
-    """当日与前一日的连板表（供涨停表现维度：最高板/高位股群/赚钱效应）。"""
-    d = datetime.strptime(date, '%Y-%m-%d').date()
-    span = [(d - timedelta(days=i)).isoformat() for i in range(STREAK_DAYS, -1, -1)]
+    """当日与前一交易日的连板表（供涨停表现维度：最高板/高位股群/赚钱效应）。
+    交易日口径：跨周末/假期延续，与 history() 一致。"""
+    span = _streak_span(store, date)
     streaks = _streaks(store, span)
-    return streaks.get(span[-2]), streaks.get(date)
+    return (streaks.get(span[-2]) if len(span) >= 2 else None), streaks.get(date)
 
 
 def daily(store, date):
@@ -244,13 +243,13 @@ def history(store, limit=60):
     missing = [d for d in dates if d not in cached]
     if missing:
         # 一次性预扫描连板（懒回补整段共用），避免逐日重复扫描
-        d0 = datetime.strptime(dates[0], '%Y-%m-%d').date()
-        span = [(d0 - timedelta(days=i)).isoformat() for i in range(STREAK_DAYS, 0, -1)] + list(dates)
+        span = _streak_span(store, dates[0], dates[-1])
         streaks = _streaks(store, span)
+        lead = [d for d in span if d < dates[0]]
         for i, date in enumerate(dates):
             if date in cached:
                 continue
-            prev = streaks.get(dates[i - 1]) if i else streaks.get(span[STREAK_DAYS - 1])
+            prev = streaks.get(dates[i - 1]) if i else (streaks.get(lead[-1]) if lead else None)
             fresh = _compute(store, date, prev_streak=prev, today_streak=streaks.get(date))
             if fresh is None:
                 continue

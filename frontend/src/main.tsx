@@ -131,7 +131,7 @@ function App(){
  useEffect(()=>{const onHash=()=>setNewsView(location.hash==='#news');window.addEventListener('hashchange',onHash);return()=>window.removeEventListener('hashchange',onHash);},[]);
  const [kind,setKind]=useState('industry');const [conceptSource,setConceptSource]=useState('ths');const mode='close';const [date,setDate]=useState('');const [dates,setDates]=useState<Dates>({snapshots:[],history_dates:[]});
  const [data,setData]=useState<Listing|null>(null);const [market,setMarket]=useState<Market|null>(null);const [status,setStatus]=useState<Status|null>(null);const [error,setError]=useState('');const [loading,setLoading]=useState(true);const [refresh,setRefresh]=useState(0);const [sentiCurve,setSentiCurve]=useState<{date:string;score:number}[]>([]);
- const [boardsCurve,setBoardsCurve]=useState<{date:string;tiers:{boards:number;names:string[]}[]}[]>([]);const [showCurve,setShowCurve]=useState(false);const [curveSel,setCurveSel]=useState({senti:true,boards:true});
+ const [boardsCurve,setBoardsCurve]=useState<{date:string;tiers:{boards:number;names:string[]}[];source?:string}[]>([]);const [showCurve,setShowCurve]=useState(false);const [curveSel,setCurveSel]=useState({senti:true,boards:true});
  const [emoCurve,setEmoCurve]=useState<{date:string;ice:number|null;climax:number|null;source:string;subs?:any}[]>([]);const [showEmo,setShowEmo]=useState(false);
  const [leaderPerf,setLeaderPerf]=useState<{date:string|null;pools:{emotion:{code:string;name:string;d1:number|null;d10:number|null;d20:number|null}[]}}|null>(null);
  const toggleCurve=()=>{const nv=!showCurve;setShowCurve(nv);if(nv)setTimeout(()=>document.getElementById('curve')?.scrollIntoView({behavior:'smooth',block:'center'}),80);};
@@ -177,7 +177,7 @@ function App(){
    {title:'成交额聚焦',value:amountLeaders[0]?.name??'成交占比待核验',description:amountLeaders[0]?'当前筛选下成交额占比居首，可在资金面板核对。':'有效样本不足时留空。',href:'#turnover'}
  ];
  const sentiByDate:Record<string,number>=Object.fromEntries(sentiCurve.map(r=>[r.date,r.score] as [string,number]));
- const boardsByDate:Record<string,{boards:number;names:string[]}>=Object.fromEntries(boardsCurve.map(r=>[r.date,r.tiers[0]] as [string,{boards:number;names:string[]}]));
+ const boardsByDate:Record<string,{boards:number;names:string[];source?:string}>=Object.fromEntries(boardsCurve.map(r=>[r.date,{...r.tiers[0],source:r.source}] as [string,{boards:number;names:string[];source?:string}]));
  const emoByDate:Record<string,{ice:number|null;climax:number|null;source:string;subs?:any}>=Object.fromEntries(emoCurve.map(r=>[r.date,{ice:r.ice,climax:r.climax,source:r.source,subs:r.subs}] as [string,{ice:number|null;climax:number|null;source:string;subs?:any}]));
  const curveDays=[...new Set([...sentiCurve.map(r=>r.date),...boardsCurve.map(r=>r.date)])].sort();
  const emoDays=emoCurve.map(r=>r.date);
@@ -226,7 +226,7 @@ function App(){
        dataBackground:{lineStyle:{color:'#c9cdc2'},areaStyle:{color:'rgba(54,88,62,.08)'}},
        selectedDataBackground:{lineStyle:{color:'#36583e'},areaStyle:{color:'rgba(54,88,62,.14)'}},
        textStyle:{fontSize:9,color:'#8b8d87'}}],
-   tooltip:{trigger:'axis',formatter:(ps:any)=>{const day=curveDays[ps[0]?.dataIndex]||'';const lines=ps.filter((p:any)=>p.data&&p.value!=null).map((p:any)=>p.seriesName==='最高板'?`最高板 <b>${p.data.boards}板</b>：${p.data.names.join('、')}`:`综合强度 <b>${p.value}</b>`);return [day,...lines].join('<br/>');}},
+   tooltip:{trigger:'axis',formatter:(ps:any)=>{const day=curveDays[ps[0]?.dataIndex]||'';const lines=ps.filter((p:any)=>p.data&&p.value!=null).map((p:any)=>p.seriesName==='最高板'?`最高板 <b>${p.data.boards}板</b>：${p.data.names.join('、')}${p.data.source==='kline'?'（日K回补）':''}`:`综合强度 <b>${p.value}</b>`);return [day,...lines].join('<br/>');}},
    xAxis:{type:'category',data:curveDays.map(d=>d.slice(5)),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8b8d87',fontSize:10}},
    yAxis:[{type:'value',show:curveSel.senti,min:0,max:100,interval:10,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{lineStyle:{color:'#eef0e8'}}},
      {type:'value',show:curveSel.boards,min:0,minInterval:1,axisLabel:{color:'#8b8d87',fontSize:10},splitLine:{show:curveSel.senti?false:true,lineStyle:{color:'#eef0e8'}}}],
@@ -239,9 +239,9 @@ function App(){
      lineStyle:{width:2,color:'#36583e'},itemStyle:{color:'#36583e'},
      label:{show:true,position:'top' as const,fontSize:9,color:'#36583e',lineHeight:12,
        formatter:(p:any)=>p.data?.names?p.data.names.map((n:string)=>`${n}${p.data.boards}`).join('\n'):''},
-     data:curveDays.map(d=>{const t=boardsByDate[d];return t?{value:t.boards,boards:t.boards,names:t.names}:null;})
+     data:curveDays.map(d=>{const t=boardsByDate[d];return t?{value:t.boards,boards:t.boards,names:t.names,source:t.source}:null;})
    }]:[])]}}/>:<Empty title="暂无曲线数据" text="等待连续交易日的市场快照与涨停池积累。"/>}
- <p className="footnote">自研近似算法（参考开盘啦五维度），非开盘啦官方数值 · 涨停表现维度近两周取池数据、更早日期按日K近似回补 · 量能带方向（放量下跌减分）· 高度含高位股群与绕异动加成 · 最高板取自每日涨停池，并列股票全部列出</p></section>}
+ <p className="footnote">自研近似算法（参考开盘啦五维度），非开盘啦官方数值 · 涨停表现维度近两周取池数据、更早日期按日K近似回补 · 量能带方向（放量下跌减分）· 高度含高位股群与绕异动加成 · 最高板近两周取每日涨停池、更早日期按日K近似回补（悬停提示中标注「日K回补」），并列股票全部列出</p></section>}
  {showEmo&&<section id="emotion-curve" className="breadth-card sentiment-curve"><h3>冰点分 × 高潮分<em className="sentiment-tag">自研打分</em></h3>
  {emoCurve.length>1?<Chart height={260} option={{
    grid:{left:36,right:36,top:16,bottom:48},

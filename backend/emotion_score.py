@@ -39,7 +39,6 @@
 """
 import json
 import math
-from datetime import datetime, timedelta
 
 from .analytics import hs_stock
 from .leaders import list_pools
@@ -150,6 +149,19 @@ def _streaks(store, dates):
         cur = {c: cur.get(c, 0) + 1 for c in sealed}
         result[d] = dict(cur)
     return result
+
+
+def _streak_span(store, start, end=None):
+    """连板统计用的交易日序列（升序）：start 之前 30 个 stocks 收盘交易日起，
+    至 end（默认 start）止。只含真实交易日——连板跨周末/假期延续。
+    （30 个交易日 ≈ 42 个自然日，覆盖 STREAK_DAYS 的回看语义。）"""
+    with store.connect() as db:
+        tdays = [r[0] for r in db.execute(
+            "SELECT trade_date FROM snapshots WHERE kind='stocks' AND mode='close'"
+            ' AND trade_date<=? GROUP BY trade_date ORDER BY trade_date',
+            (end or start,)).fetchall()]
+    lead = [d for d in tdays if d < start][-30:]
+    return lead + [d for d in tdays if d >= start]
 
 
 def _leaders_change(store, date, prev_streak):
@@ -547,8 +559,7 @@ def daily(store, date):
     revision = msnap['id'] if msnap else 0
     if cached and cached['revision'] == revision:
         return dict(cached)
-    d = datetime.strptime(date, '%Y-%m-%d').date()
-    span = [(d - timedelta(days=i)).isoformat() for i in range(STREAK_DAYS, -1, -1)]
+    span = _streak_span(store, date)
     streaks = _streaks(store, span)
     # 近 5 个收盘日的 (涨停, 跌停)，供涨停/跌停放大维度
     close_dates = sorted(x['trade_date'] for x in store.dates()
@@ -562,7 +573,7 @@ def daily(store, date):
                 close_dates).fetchall()}
         prev5 = [v for v in (_lu_ld_of(prev_rows.get(x)) for x in close_dates)
                  if v is not None]
-    row = compute(store, date, prev_streak=streaks.get(span[-2]),
+    row = compute(store, date, prev_streak=streaks.get(span[-2]) if len(span) >= 2 else None,
                   today_streak=streaks.get(date), prev5=prev5)
     if not row:
         return None
@@ -581,9 +592,9 @@ def history(store, limit=250):
         cached = {r['trade_date']: dict(r) for r in db.execute(
             f"SELECT * FROM emotion_scores WHERE trade_date IN ({','.join('?' * len(dates))})",
             dates).fetchall()}
-    d0 = datetime.strptime(dates[0], '%Y-%m-%d').date()
-    span = [(d0 - timedelta(days=i)).isoformat() for i in range(STREAK_DAYS, 0, -1)] + list(dates)
+    span = _streak_span(store, dates[0], dates[-1])
     streaks = _streaks(store, span)
+    lead = [d for d in span if d < dates[0]]  # 窗口前的种子交易日
     # 窗口前 5 个收盘日的缓存行，作为首日涨停/跌停放大维度的 prev5 种子
     seed_dates = sorted(x['trade_date'] for x in store.dates()
                         if x['mode'] == 'close' and x['trade_date'] < dates[0])[-5:]
@@ -605,7 +616,7 @@ def history(store, limit=250):
             if v is not None:
                 counts.append(v)
             continue
-        prev = streaks.get(dates[i - 1]) if i else streaks.get(span[STREAK_DAYS - 1])
+        prev = streaks.get(dates[i - 1]) if i else (streaks.get(lead[-1]) if lead else None)
         row = compute(store, date, prev_streak=prev, today_streak=streaks.get(date),
                       prev5=counts[-5:])
         if row:
