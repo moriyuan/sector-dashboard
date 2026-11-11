@@ -1,5 +1,5 @@
-import {useEffect,useState} from 'react';
-import {Button,Empty,Select,Spin,Tag,Tooltip} from 'antd';
+import {useEffect,useMemo,useState} from 'react';
+import {Button,Empty,Select,Spin,Tag} from 'antd';
 import './limitup.css';
 
 type Stock={code:string;name:string;boards:number|null;board_label:string|null;first_time:string|null;
@@ -20,19 +20,49 @@ function StatItem({label,value,title}:{label:string;value:React.ReactNode;title?
  return <div className="lu-stat" title={title}><span>{label}</span><b>{value}</b></div>;
 }
 
-function StockRow({s}:{s:Stock}){
+function StockRow({s,open,onToggle}:{s:Stock;open:boolean;onToggle:()=>void}){
  const reason=s.reason_full||s.reason;
- return <li className="lu-stock">
-  <span className={`lu-boards ${(s.boards??1)>1?'multi':''}`}>{boardsLabel(s)}</span>
-  <span className="lu-name">{s.name}<small>{s.code}</small></span>
-  <span className="lu-time">{s.first_time?.slice(0,5)||'—'}</span>
-  <span className={s.change!=null&&s.change>=0?'up':'down'}>{pctText(s.change)}</span>
-  <span className="lu-seal">{sealText(s.seal_fund)}</span>
-  <span className="lu-reason">
-   {reason?<Tooltip title={s.reason_full&&s.reason&&s.reason_full!==s.reason?s.reason:null} placement="topLeft">{reason}</Tooltip>:<i>待补齐</i>}
+ return <li className={`lu-stock ${open?'open':''}`}>
+  <button className="lu-stock-row" onClick={onToggle} aria-expanded={open}>
+   <span className={`lu-boards ${(s.boards??1)>1?'multi':''}`}>{boardsLabel(s)}</span>
+   <span className="lu-name">{s.name}<small>{s.code}</small></span>
+   <span className="lu-time">{s.first_time?.slice(0,5)||'—'}</span>
+   <span className={s.change!=null&&s.change>=0?'up':'down'}>{pctText(s.change)}</span>
+   <span className="lu-seal">{sealText(s.seal_fund)}</span>
+   <span className={`lu-caret ${open?'up':''}`} aria-hidden="true"/>
+  </button>
+  {open&&<div className="lu-stock-reason">
+   {reason?<p>{reason}</p>:<p className="muted">涨停原因待补齐</p>}
    {s.tags.length>0&&<span className="lu-tags">{s.tags.map(t=><em key={t}>{t}</em>)}</span>}
-  </span>
+   <span className="lu-srcs">{s.sources.map(x=>SRC_NAMES[x]||x).join(' · ')}</span>
+  </div>}
  </li>;
+}
+
+function ThemeRow({t,rank,open,onToggle}:{t:Theme;rank:number;open:boolean;onToggle:()=>void}){
+ const [openReasons,setOpenReasons]=useState<Set<string>>(new Set());
+ const toggleReason=(code:string)=>setOpenReasons(v=>{
+  const n=new Set(v);n.has(code)?n.delete(code):n.add(code);return n;});
+ return <article className={`lu-theme ${open?'open':''}`}>
+  <button className="lu-theme-row" onClick={onToggle} aria-expanded={open}>
+   <span className="lu-rank">{rank}</span>
+   <span className="lu-theme-name">{t.name}<b className="lu-count">{t.stock_count}</b></span>
+   {t.strength!=null
+    ?<span className={`lu-strength ${strengthClass(t.strength)}`} title="开盘啦题材强度">
+      强度 {Math.round(t.strength)}{t.strength_rank!=null&&<i>#{t.strength_rank}</i>}</span>
+    :<span className="lu-strength none">强度 —</span>}
+   {t.change!=null&&<span className={`lu-change ${t.change>=0?'up':'down'}`}>{pctText(t.change)}</span>}
+   <span className="lu-expand">{open?'收起':'展开板块'}<i className={`lu-caret ${open?'up':''}`}/></span>
+  </button>
+  {open&&<div className="lu-theme-body">
+   {t.logic&&<p className="lu-logic">{t.logic}</p>}
+   <div className="lu-stock-head">
+    <span>身位</span><span>股票</span><span>首封</span><span>涨幅</span><span>封单</span><span></span>
+   </div>
+   <ul>{t.stocks.map(s=><StockRow key={s.code} s={s} open={openReasons.has(s.code)}
+     onToggle={()=>toggleReason(s.code)}/>)}</ul>
+  </div>}
+ </article>;
 }
 
 export default function LimitUp(){
@@ -42,6 +72,7 @@ export default function LimitUp(){
  const [error,setError]=useState<string>();
  const [loading,setLoading]=useState(false);
  const [collecting,setCollecting]=useState(false);
+ const [openThemes,setOpenThemes]=useState<Set<string>>(new Set());
 
  useEffect(()=>{window.scrollTo({top:0});
   fetch('api/limitup/dates').then(r=>r.json()).then(d=>{
@@ -49,7 +80,7 @@ export default function LimitUp(){
   }).catch(()=>setError('读取日期列表失败'));
  },[]);
 
- useEffect(()=>{if(!date)return;setLoading(true);setError(undefined);
+ useEffect(()=>{if(!date)return;setLoading(true);setError(undefined);setOpenThemes(new Set());
   fetch('api/limitup/daily?'+new URLSearchParams({date})).then(async r=>{
    if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(typeof d.detail==='string'?d.detail:'读取失败');}
    return r.json();
@@ -60,16 +91,23 @@ export default function LimitUp(){
   fetch('api/limitup/collect?'+new URLSearchParams({date}),{method:'POST'}).then(async r=>{
    if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(typeof d.detail==='string'?d.detail:'采集失败');}
    return r.json();
-  }).then(d=>{setData(d);if(!dates.includes(d.date))setDates(v=>[d.date,...v]);})
+  }).then(d=>{setData(d);setOpenThemes(new Set());if(!dates.includes(d.date))setDates(v=>[d.date,...v]);})
    .catch(e=>setError(e.message)).finally(()=>setCollecting(false));};
+
+ const toggleTheme=(code:string)=>setOpenThemes(v=>{
+  const n=new Set(v);n.has(code)?n.delete(code):n.add(code);return n;});
+ const allCodes=useMemo(()=>new Set((data?.themes||[]).map(t=>t.theme_code)),[data]);
+ const allOpen=allCodes.size>0&&openThemes.size>=allCodes.size;
 
  const stats=data?.stats||{};
  return <main className="lu-page">
   <header className="lu-head">
-   <div><h1>涨停汇总</h1><p className="muted">题材按涨停数降序 · 题材内按连板数降序、同身位按首封时间从早到晚</p></div>
+   <div><h1>涨停汇总</h1><p className="muted">题材按开盘啦强度排名 · 组内按连板高度、同身位按首封时间</p></div>
    <div className="lu-controls">
     <Select value={date} onChange={setDate} style={{minWidth:150}} placeholder="选择交易日"
      options={dates.map(d=>({value:d,label:d}))} notFoundContent="暂无已采集日期"/>
+    <Button onClick={()=>setOpenThemes(allOpen?new Set():new Set(allCodes))} disabled={!data}>
+     {allOpen?'全部收起':'全部展开'}</Button>
     <Button onClick={recollect} loading={collecting} disabled={!date}>重新采集</Button>
    </div>
   </header>
@@ -87,26 +125,10 @@ export default function LimitUp(){
     <Tag key={k} color={String(v).startsWith('ok')?'green':String(v).startsWith('skip')?'default':'red'}>
      {SRC_NAMES[k]||k} {String(v).replace(/^(ok|fail|skip):/,'')}</Tag>)}</p>
    <section className="lu-themes">
-    {data.themes.map(t=><article className="lu-theme" key={t.theme_code}>
-     <header>
-      <div className="lu-theme-title">
-       <h2>{t.name}</h2>
-       {t.strength!=null&&<span className={`lu-strength ${strengthClass(t.strength)}`} title="开盘啦题材强度">
-        强度 {Math.round(t.strength)}{t.strength_rank!=null&&<i>#{t.strength_rank}</i>}</span>}
-       <span className="lu-count">{t.stock_count} 只涨停</span>
-       {t.change!=null&&<span className={t.change>=0?'up':'down'}>{pctText(t.change)}</span>}
-      </div>
-      {t.logic&&<p className="lu-logic">{t.logic}</p>}
-     </header>
-     <ul>
-      <li className="lu-stock lu-stock-head">
-       <span>身位</span><span>股票</span><span>首封</span><span>涨幅</span><span>封单</span><span>涨停原因</span>
-      </li>
-      {t.stocks.map(s=><StockRow key={s.code} s={s}/>)}
-     </ul>
-    </article>)}
+    {data.themes.map((t,i)=><ThemeRow key={t.theme_code} t={t} rank={i+1}
+     open={openThemes.has(t.theme_code)} onToggle={()=>toggleTheme(t.theme_code)}/>)}
    </section>
-   <footer className="lu-foot">股票全集以东方财富涨停池为基准；题材分组以开盘啦复盘为准，未分组按同花顺原因首标签归并；原因全文开盘啦优先、韭研公社补充；历史日强度为逐板块回补。</footer>
+   <footer className="lu-foot">题材排序取开盘啦强度榜（无强度题材按涨停数排后）；点击题材展开个股，点击个股行展开涨停原因。原因全文开盘啦优先、韭研公社补充、同花顺标签兜底。</footer>
   </>:!error&&<Empty description="暂无数据，请选择交易日或点击重新采集"/>}
  </main>;
 }

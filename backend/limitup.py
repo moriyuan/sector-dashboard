@@ -5,7 +5,7 @@
 - 题材分组以开盘啦复盘/梯队为准，未分组股票按同花顺涨停原因首标签归并；
 - 涨停原因：开盘啦原因全文优先，韭研公社异动解析补充，同花顺标签兜底；
 - 题材强度取开盘啦强度榜（仅近 2 个交易日），历史逐板块用 GetPlate_Info_QJ 回补；
-- 排序：题材按涨停数降序（同数按强度降序）；题材内按连板数降序、同身位按首封时间升序。
+- 排序：题材按开盘啦强度降序（无强度按涨停数降序）；题材内按连板数降序、同身位按首封时间升序。
 
 每天 17:00（北京时间）自动采集当日数据并落库，失败每 10 分钟重试至 20:00；
 单源失败不影响其他源，sources 字段标注每只股票/题材的数据来源。
@@ -303,7 +303,7 @@ def view(store, day: str) -> dict:
         if not meta:
             return None
         themes = [dict(r) for r in db.execute(
-            'SELECT * FROM limitup_theme WHERE trade_date=? ORDER BY stock_count DESC, strength DESC', (day,))]
+            'SELECT * FROM limitup_theme WHERE trade_date=? ORDER BY strength DESC, stock_count DESC', (day,))]
         stocks = [dict(r) for r in db.execute(
             'SELECT * FROM limitup_stock WHERE trade_date=?', (day,))]
     by_theme: dict[str, list] = {}

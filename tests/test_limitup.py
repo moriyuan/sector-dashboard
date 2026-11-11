@@ -166,7 +166,7 @@ def test_collect_groups_and_orders(store):
     assert result['date'] == DAY
     assert result['stats']['limit_up'] == 5 and result['stats']['limit_down'] == 2
     themes = result['themes']
-    # 题材按涨停数降序：机器人(3) > 锂电池(1) = 算力租赁(1)
+    # 题材按开盘啦强度降序：机器人(5230) > 锂电池(3100) > 算力租赁(无强度排最后)
     assert [t['name'] for t in themes] == ['机器人', '锂电池', '算力租赁']
     robot = themes[0]
     assert robot['stock_count'] == 3
@@ -176,6 +176,23 @@ def test_collect_groups_and_orders(store):
     assert robot['stocks'][0]['first_time'] == '09:25:00'
     # 涨停数相同题材间按强度降序（锂电池有强度，tag 兜底组无强度排后）
     assert themes[1]['strength'] == 3100.0 and themes[2]['strength'] is None
+
+
+def test_collect_theme_order_by_strength_first(store):
+    """强度高的题材排在涨停数更多的题材前面；无强度题材排最后。"""
+    em = FakeEM([em_row('300001', '甲', 1, '09:30:00'), em_row('300002', '乙', 1, '09:31:00'),
+                 em_row('300003', '丙', 1, '09:32:00')])
+    ths = FakeTHS([ths_row('300001', '甲', 'A题材'), ths_row('300002', '乙', 'A题材'),
+                   ths_row('300003', '丙', 'B题材')])
+    kpl = FakeKPL(themes=[
+        {'code': '8010A', 'name': 'A题材', 'explain': None, 'stocks': [
+            {'code': '300001', 'name': '甲', 'boards': 1}, {'code': '300002', 'name': '乙', 'boards': 1}]},
+        {'code': '8010B', 'name': 'B题材', 'explain': None, 'stocks': [
+            {'code': '300003', 'name': '丙', 'boards': 1}]}],
+        board=[{'code': '8010B', 'name': 'B题材', 'strength': 9000.0, 'change': 1.0, 'rank': 1},
+               {'code': '8010A', 'name': 'A题材', 'strength': 100.0, 'change': 0.5, 'rank': 20}])
+    result = collect(store, DAY, em=em, ths=ths, kpl=kpl, jygs=None, today=DAY)
+    assert [t['name'] for t in result['themes']] == ['B题材', 'A题材']
 
 
 def test_collect_merges_sources(store):

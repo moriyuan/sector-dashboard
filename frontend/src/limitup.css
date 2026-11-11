@@ -1,43 +1,78 @@
-/* 涨停汇总页 */
-.lu-page{max-width:1180px;margin:0 auto;padding:96px 20px 60px}
+/* 涨停汇总页：题材手风琴行式布局 */
+.lu-page{max-width:980px;margin:0 auto;padding:96px 20px 60px}
 .lu-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:14px}
 .lu-head h1{font-size:26px;margin:0 0 4px}
-.lu-controls{display:flex;gap:8px;align-items:center}
+.lu-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .lu-error{color:#b3261e;background:#fdecea;border-radius:8px;padding:8px 12px;margin:10px 0}
 .lu-loading{display:flex;justify-content:center;padding:80px 0}
 .lu-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
-.lu-stat{background:var(--panel,#fff);border:1px solid #e6e8e2;border-radius:10px;padding:10px 14px}
+.lu-stat{background:var(--panel-bg,#fff);border:1px solid #e6e8e2;border-radius:10px;padding:10px 14px}
 .lu-stat span{display:block;font-size:12px;color:#8c8f86}
 .lu-stat b{font-size:20px}
 .lu-sources{margin:4px 0 16px;font-size:13px;color:#8c8f86}
 .lu-sources .ant-tag{margin-inline-end:6px}
-.lu-themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:14px}
-@media(max-width:640px){.lu-themes{grid-template-columns:1fr}}
-.lu-theme{background:var(--panel-bg,#fff);border:1px solid #e6e8e2;border-radius:14px;padding:14px 16px;overflow:hidden}
-.lu-theme-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.lu-theme-title h2{font-size:17px;margin:0}
-.lu-strength{font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;background:#f0f1ec;color:#5a5f58}
+
+/* 题材手风琴 */
+.lu-themes{display:flex;flex-direction:column;gap:10px}
+.lu-theme{background:var(--panel-bg,#fff);border:1px solid #e6e8e2;border-radius:14px;overflow:hidden;
+ transition:box-shadow .18s ease,border-color .18s ease}
+.lu-theme.open{border-color:#d8ddd2;box-shadow:0 4px 18px rgba(47,52,48,.06)}
+.lu-theme-row{display:grid;grid-template-columns:34px 1fr auto auto auto;gap:12px;align-items:center;
+ width:100%;padding:15px 18px;border:0;background:transparent;text-align:left;font-size:14px}
+.lu-theme-row:hover{background:#f7f9f4}
+.lu-theme.open .lu-theme-row{border-bottom:1px solid #f0f1ec}
+.lu-rank{font-family:Menlo,monospace;font-size:12px;color:#a8ae9f;text-align:center}
+.lu-theme:nth-child(-n+3) .lu-rank{color:#b3261e;font-weight:700}
+.lu-theme-name{font-size:16px;font-weight:650;display:flex;align-items:baseline;gap:8px;min-width:0}
+.lu-count{color:#c23531;font-size:12px;font-weight:700}
+.lu-count::before{content:'· ';color:#c9cec2}
+.lu-count::after{content:' 只';font-weight:400;color:#8c8f86}
+.lu-strength{font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;background:#f0f1ec;color:#5a5f58;white-space:nowrap}
 .lu-strength.hot{background:#fde8e6;color:#b3261e}
 .lu-strength.warm{background:#fdf3e0;color:#9a6a00}
 .lu-strength.cool{background:#eef4ea;color:#4a6b4f}
+.lu-strength.none{background:transparent;color:#b6bab0;font-weight:400}
 .lu-strength i{font-style:normal;opacity:.65;margin-left:4px}
-.lu-count{font-size:12px;color:#8c8f86}
-.lu-logic{font-size:13px;color:#6b6f66;margin:8px 0 0;line-height:1.6}
-.lu-theme ul{list-style:none;margin:12px 0 0;padding:0;border-top:1px solid #f0f1ec}
-.lu-stock{display:grid;grid-template-columns:64px 110px 46px 64px 62px 1fr;gap:8px;align-items:baseline;
- padding:7px 0;border-bottom:1px dashed #f0f1ec;font-size:13px}
-@media(max-width:640px){.lu-stock{grid-template-columns:56px 90px 42px 1fr;row-gap:2px}
- .lu-stock .lu-seal{display:none}.lu-stock .lu-reason{grid-column:1/-1}}
+.lu-change{font-variant-numeric:tabular-nums;font-size:13px;white-space:nowrap}
+.lu-expand{font-size:12px;color:#73826c;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.lu-caret{display:inline-block;width:7px;height:7px;border-right:1.6px solid currentColor;
+ border-bottom:1.6px solid currentColor;transform:rotate(45deg);transition:transform .18s ease}
+.lu-caret.up{transform:rotate(-135deg)}
+
+/* 题材展开体 */
+.lu-theme-body{padding:4px 18px 12px 34px}
+.lu-logic{font-size:13px;color:#6b6f66;line-height:1.7;margin:10px 0;padding:9px 12px;
+ background:#f7f9f3;border-left:3px solid #cfe0c8;border-radius:0 8px 8px 0}
+.lu-stock-head{display:grid;grid-template-columns:76px 1fr 52px 64px 66px 26px;gap:8px;
+ font-size:11px;color:#a8ae9f;padding:8px 0 6px;border-bottom:1px solid #f0f1ec}
+.lu-theme-body ul{list-style:none;margin:0;padding:0}
+.lu-stock{border-bottom:1px dashed #f0f1ec}
 .lu-stock:last-child{border-bottom:none}
-.lu-stock-head{color:#8c8f86;font-size:12px;border-bottom-style:solid}
-.lu-boards{font-weight:700;color:#9a6a00;background:#fdf3e0;border-radius:6px;padding:1px 6px;text-align:center;font-size:12px}
+.lu-stock-row{display:grid;grid-template-columns:76px 1fr 52px 64px 66px 26px;gap:8px;align-items:center;
+ width:100%;padding:8px 0;border:0;background:transparent;text-align:left;font-size:13px}
+.lu-stock-row:hover{background:#fafbf8}
+.lu-stock.open .lu-stock-row{background:#fafbf8}
+.lu-boards{font-weight:700;color:#9a6a00;background:#fdf3e0;border-radius:6px;padding:2px 6px;
+ text-align:center;font-size:12px;justify-self:start;min-width:56px}
 .lu-boards.multi{color:#b3261e;background:#fde8e6}
-.lu-name{font-weight:600}
+.lu-name{font-weight:600;min-width:0}
 .lu-name small{color:#8c8f86;font-weight:400;margin-left:6px}
 .lu-time{font-variant-numeric:tabular-nums;color:#5a5f58}
 .lu-seal{font-variant-numeric:tabular-nums;color:#5a5f58}
-.lu-reason{color:#3d423a;line-height:1.55}
-.lu-reason i{color:#b6bab0;font-style:normal}
-.lu-tags{display:block;margin-top:2px}
-.lu-tags em{font-style:normal;font-size:11px;color:#6b7a6c;background:#eef4ea;border-radius:4px;padding:0 6px;margin-right:4px}
+.lu-stock-reason{padding:2px 0 12px 84px;font-size:12.5px;color:#3d423a}
+.lu-stock-reason p{margin:0 0 6px;line-height:1.75;max-width:720px}
+.lu-tags em{font-style:normal;font-size:11px;color:#6b7a6c;background:#eef4ea;border-radius:4px;
+ padding:0 6px;margin-right:4px}
+.lu-srcs{margin-left:10px;font-size:11px;color:#b6bab0}
 .lu-foot{margin-top:20px;font-size:12px;color:#8c8f86;line-height:1.7}
+
+@media(max-width:720px){
+ .lu-theme-row{grid-template-columns:26px 1fr auto;padding:13px 14px;row-gap:6px}
+ .lu-change{display:none}
+ .lu-expand{grid-column:3}
+ .lu-theme-body{padding:2px 12px 10px}
+ .lu-stock-head{display:none}
+ .lu-stock-row{grid-template-columns:64px 1fr 48px 26px}
+ .lu-stock-row .lu-seal{display:none}
+ .lu-stock-reason{padding-left:0}
+}
