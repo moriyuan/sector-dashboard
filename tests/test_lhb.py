@@ -175,3 +175,113 @@ def test_three_day_compounding_calendar_missing_and_asof(tmp_path,monkeypatch):
     clock[0]=DAY+'T16:00:00+08:00'
     s.observe('calendar',['2026-10-30','2026-10-31',DAY])
     assert three_day_changes(s,DAY,cutoff,market,{'000001'})[0]=={}
+
+
+def test_anonymous_identical_slots_preserved_but_page_overlap_rejected():
+    h=head(100,'上市首日可转债',code='123290')
+    anonymous=dict(seat(h,'机构专用',6500550),OPERATEDEPT_CODE='0')
+    def page(rows,pages=1,total=None):
+        return {'success':True,'code':0,'result':{'pages':pages,'count':len(rows) if total is None else total,'data':rows}}
+    assert len(report_rows('buy',DAY,lambda *_:page([anonymous,anonymous])))==2
+    with pytest.raises(ValueError,match='分页重复'):
+        report_rows('buy',DAY,lambda *_:page([anonymous],pages=2,total=2))
+    named=dict(anonymous,OPERATEDEPT_CODE='100',OPERATEDEPT_NAME='具名营业部')
+    with pytest.raises(ValueError,match='分页重复'):
+        report_rows('buy',DAY,lambda *_:page([named,named]))
+
+
+def test_convertible_anonymous_seats_do_not_block_a_share_disclosures(tmp_path):
+    stock=head(1,'日涨幅偏离值达到7%的前5只证券')
+    bond=dict(head(2,'上市首日可转债',code='123290'),SECURITY_TYPE_CODE='bond')
+    anon=dict(seat(bond,'机构专用',5),OPERATEDEPT_CODE='0')
+    rows={'summary':[stock,bond],'buy':[seat(stock,'股票买方',8),anon,anon],
+          'sell':[seat(stock,'股票卖方',-3)]}
+    def page(table,day,p):
+        return {'success':True,'code':0,'result':{'pages':1,'count':len(rows[table]),'data':rows[table]}}
+    store=Store(tmp_path/'db')
+    state=collect(store,DAY,lambda t,d:report_rows(t,d,page))
+    assert state['status']=='published'
+    assert len(store.snapshot('lhb',DAY,'close')['payload']['rows'])==1
+
+
+def test_public_seat_associations_exact_matching_and_asof():
+    from copy import deepcopy
+    from backend.lhb_seats import annotate,association,PROFILES
+    profile=PROFILES[0]
+    s=dict(name=profile['names'][0],seat_code=profile['seat_code'],buy=10,sell=20,net=-10)
+    assert association(s)['name']=='章盟主'
+    assert association(dict(s,name='其他证券上海长宁区江苏路证券营业部')) is None
+    assert association(dict(s,seat_code='different')) is None
+    assert association(dict(s,name='机构专用')) is None
+    assert association({k:v for k,v in s.items() if k!='seat_code'})['match'].startswith('完整名称')
+    payload=dict(rows=[dict(buy=[s],sell=[deepcopy(s)],buy_state='reported',sell_state='reported')])
+    d=annotate(payload)
+    assert len(d['rows'][0]['known_seats'])==1
+    assert d['rows'][0]['known_seats'][0]['net']==-10
+    assert d['rows'][0]['known_seats'][0]['sides']==['buy','sell']
+    assert 'association' not in payload['rows'][0]['buy'][0]
+    earlier=annotate(payload,datetime(2026,11,6,17,tzinfo=TZ))
+    assert earlier['rows'][0]['known_seats']==[]
+    assert earlier['rows'][0]['buy'][0]['association'] is None
+
+
+def test_expanded_seats_preserve_earlier_research_and_merge_split_amounts():
+    from backend.lhb_seats import annotate,association,PROFILES
+    expanded=next(p for p in PROFILES if p['name']=='一瞬流光')
+    buy=dict(name=expanded['names'][0],seat_code=expanded['seat_code'],buy=3910228.,sell=None,net=3910228.)
+    sell=dict(buy,buy=None,sell=3257960.,net=-3257960.)
+    row=dict(buy=[buy],sell=[sell],buy_state='reported',sell_state='reported')
+    d=annotate(dict(rows=[row]))
+    assert d['seat_research']['profile_count']==20
+    assert d['rows'][0]['known_seats'][0]['net']==652268.
+    assert d['rows'][0]['buy'][0]['net']==3910228.
+    middle=datetime(2026,11,8,12,30,tzinfo=TZ)
+    assert association(buy,middle) is None
+    earlier=annotate(dict(rows=[row]),middle)
+    assert earlier['seat_research']['profile_count']==4
+    assert earlier['rows'][0]['known_seats']==[]
+    assert association(dict(buy,name='中泰证券股份有限公司其他分公司')) is None
+    names=[n for p in PROFILES for n in p['names']]
+    assert len(names)==len(set(names))
+    for profile in PROFILES:
+        assert profile['sources'] and all(s['url'].startswith('https://') and s['basis'] for s in profile['sources'])
+
+
+def test_seat_stock_summary_deduplicates_and_separates_periods():
+    from copy import deepcopy
+    from backend.lhb_seats import stock_summary
+    s=dict(name='关联资金',seat='具名席位',net=100,states={'buy':'reported'})
+    r=dict(id='1',code='002086',name='东方海洋',period='single',change=None,known_seats=[s])
+    rows=[r,dict(r,id='2'),dict(r,id='3',period='three',known_seats=[dict(s,net=-30)]),
+          dict(r,id='4',period='other',known_seats=[dict(s,net=None)]),
+          dict(r,id='5',code='000001',known_seats=[])]
+    original=deepcopy(rows)
+    result=stock_summary(rows)
+    assert len(result)==1 and result[0]['change'] is None
+    periods=result[0]['periods']
+    assert periods['single'][0]['net']==100
+    assert periods['single'][0]['disclosure_ids']==['1','2']
+    assert periods['three'][0]['net']==-30
+    assert periods['other'][0]['net'] is None
+    assert rows==original
+    rows.append(dict(r,id='6',known_seats=[dict(s,net=150,states={'buy':'previous'})]))
+    conflicted=stock_summary(rows)[0]['periods']['single'][0]
+    assert conflicted['net'] is None and conflicted['conflict'] and conflicted['previous']
+    assert stock_summary([])==[]
+
+
+def test_seat_stock_summary_api_date_and_cutoff(tmp_path):
+    from backend.lhb_seats import PROFILES
+    store=Store(tmp_path/'db')
+    h=head(1,'日涨幅偏离值达到7%的前5只证券')
+    profile=PROFILES[0]
+    b=dict(seat(h,profile['names'][0],10),OPERATEDEPT_CODE=profile['seat_code'])
+    data={'summary':[h],'buy':[b],'sell':[seat(h,'未知席位',-1)]}
+    collect(store,DAY,lambda t,d:data[t])
+    with TestClient(create_app(store,collect=False)) as c:
+        summary=c.get('/api/lhb',params={'date':DAY}).json()['seat_stocks']
+        assert summary[0]['code']=='002086'
+        assert summary[0]['periods']['single'][0]['name']=='章盟主'
+        assert summary[0]['periods']['single'][0]['net']==10
+        assert c.get('/api/lhb',params={'date':'2020-01-02'}).json()['seat_stocks']==[]
+        assert c.get('/api/lhb',params={'date':DAY,'asof':'2026-11-06T18:00:00+08:00'}).json()['seat_stocks']==[]

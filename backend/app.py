@@ -42,6 +42,8 @@ def create_app(store=None, collect=True):
     app.include_router(daily_router(store))
     from .lhb_api import router as lhb_router
     app.include_router(lhb_router(store))
+    from .seat_backtest import router as seat_backtest_router
+    app.include_router(seat_backtest_router())
 
     from .etf_tracker import router as etf_router
     app.include_router(etf_router(store))

@@ -7,11 +7,15 @@ import {Pager,usePages} from './ResearchLayout';
 
 export type StockPick={date:string;code:string;name:string;asof?:string};
 export type OpenStock=(s:StockPick)=>void;
-type Seat={name:string;buy:number|null;sell:number|null;net:number|null};
+type SeatAssociation={name:string;level:string;confidence:string;reviewed_at:string;match:string;sources:{url:string;title:string;basis:string}[]};
+type Seat={name:string;buy:number|null;sell:number|null;net:number|null;association?:SeatAssociation|null};
+type KnownSeat={name:string;level:string;seat:string;sides:('buy'|'sell')[];states:Record<string,string>;net:number|null};
+type SummarySeat={name:string;seat:string;net:number|null;conflict:boolean;previous:boolean;disclosure_ids:string[]};
+type SeatStock={code:string;name:string;change:number|null;periods:Partial<Record<Period,SummarySeat[]>>};
 type RecordRow={id:string;code:string;name:string;reason:string;period:Period;net:number|null;
-  buy_total:number|null;sell_total:number|null;buy:Seat[];sell:Seat[];buy_state:string;sell_state:string};
-type Day={trade_date:string;status:string;revision:number|null;collected_at:string|null;checked_at:string|null;issues:string[];rows:RecordRow[]};
-type Listing=Omit<Day,'rows'>&{rows:(RecordRow&{change:number|null;three_day_change:number|null})[];three_day_window:string[];related_by_code:Record<string,Profile>};
+  known_seats?:KnownSeat[];buy_total:number|null;sell_total:number|null;buy:Seat[];sell:Seat[];buy_state:string;sell_state:string};
+type Day={trade_date:string;status:string;revision:number|null;collected_at:string|null;checked_at:string|null;issues:string[];seat_research?:{note:string;reviewed_at:string;available:boolean};rows:RecordRow[]};
+type Listing=Omit<Day,'rows'>&{rows:(RecordRow&{change:number|null;three_day_change:number|null})[];seat_stocks?:SeatStock[];three_day_window:string[];related_by_code:Record<string,Profile>};
 type Hit={id:string;title:string;source:string;published_at:string;basis:string;timing:string;url:string};
 type Detail=Day&{stock:{code:string;name:string;rank:number|null;change:number|null;direct:Hit[];sector:Hit[]};
                  related:Profile;news_asof:string;gainers_revision:number|null};
@@ -64,7 +68,7 @@ function DisclosureGroup({group,data,onStock}:{group:Period;data:Listing;onStock
  {rows.length?<><div className="table-wrap"><table><thead><tr><th>股票</th><th className="lhb-change">当日涨跌幅</th>{group==='three'&&<th className="lhb-change" title={data.three_day_window?.join('、')}>三日累计涨跌幅</th>}<th>上榜原因</th><th>净买额（万）</th><th>上涨线索与相关股票</th></tr></thead><tbody>
  {pages.visible.map(r=>{
    const peers=data.related_by_code?.[r.code],open=(code:string,name:string)=>onStock({code,name,date:data.trade_date});
-   return <tr key={r.id}><td><button className="lhb-stock-link" onClick={()=>open(r.code,r.name)}>{r.name}</button><small>{r.code}</small></td><td className={`lhb-change ${r.change==null?'muted':sign(r.change)}`}>{change(r.change)}</td>{group==='three'&&<td className={`lhb-change ${r.three_day_change==null?'muted':sign(r.three_day_change)}`}>{change(r.three_day_change)}</td>}<td className="lhb-reason">{r.reason}</td><td className={sign(r.net)}>{wan(r.net)}</td>
+   return <tr key={r.id}><td><button className="lhb-stock-link" onClick={()=>open(r.code,r.name)}>{r.name}</button><small>{r.code}</small>{r.known_seats?.map(k=><small key={k.name+k.seat} className="lhb-seat-label">{k.name} · {k.sides.map(side=>(side==='buy'?'买榜':'卖榜')+(k.states[side]==='previous'?'（旧记录）':'')).join('／')}<br/>{k.net==null?'净额未知':`席位净额 ${wan(k.net)} 万`}</small>)}</td><td className={`lhb-change ${r.change==null?'muted':sign(r.change)}`}>{change(r.change)}</td>{group==='three'&&<td className={`lhb-change ${r.three_day_change==null?'muted':sign(r.three_day_change)}`}>{change(r.three_day_change)}</td>}<td className="lhb-reason">{r.reason}</td><td className={sign(r.net)}>{wan(r.net)}</td>
    <td className="lhb-peer-preview">{peers?.causes?.length?<><button className="move-preview-cause" onClick={()=>open(r.code,r.name)} title={peers.causes[0].evidence.fact}>{peers.causes[0].topic||'个股事件'} · 查看依据</button>
    {peers.rows.map(peer=><button key={peer.code} title={peer.matches[0].evidence.fact} onClick={()=>open(peer.code,peer.name)}>#{peer.rank} {peer.name}</button>)}
    {peers.total>peers.rows.length&&<button className="text-button" onClick={()=>open(r.code,r.name)}>全部 {peers.total} 只</button>}
@@ -73,11 +77,26 @@ function DisclosureGroup({group,data,onStock}:{group:Period;data:Listing;onStock
  </tbody></table></div><Pager {...pages} label={groups[group]}/></>:<p className="footnote">当前存档无该类记录。</p>}</details>;
 }
 
+function SeatStockTable({data,onStock}:{data:Listing;onStock:OpenStock}){
+ const rows=data.seat_stocks||[],pages=usePages(rows,10,data.trade_date);
+ const periods:Period[]=rows.some(r=>r.periods.other?.length)?['single','three','other']:['single','three'];
+ const names=new Set(rows.flatMap(r=>Object.values(r.periods).flatMap(seats=>seats.map(s=>s.name))));
+ return <section className="lhb-seat-stocks" aria-label="游资参与股票汇总">
+ <a className="lhb-backtest-link" href="#seat-backtest">查看历史跟随回测 ↗</a><h3>游资参与股票汇总 <small>{rows.length} 只股票 · {names.size} 组关联席位</small></h3>
+ <p className="footnote">{data.trade_date} · 席位净买额（万元），＋净买入／−净卖出。重复披露去重，单日与三日累计不可相加；点击股票核对席位与关联依据。</p>
+ {rows.length?<><div className="table-wrap"><table><thead><tr><th>股票</th><th className="lhb-change">当日涨跌幅</th>{periods.map(p=><th key={p}>{groups[p]} · 关联游资及净买额</th>)}</tr></thead><tbody>
+ {pages.visible.map(row=><tr key={row.code}><td><button className="lhb-stock-link" onClick={()=>onStock({code:row.code,name:row.name,date:data.trade_date})}>{row.name}</button><small>{row.code}</small></td><td className={`lhb-change ${sign(row.change)}`}>{change(row.change)}</td>
+ {periods.map(p=><td key={p} className="lhb-summary-amounts">{row.periods[p]?.length?row.periods[p]!.map(s=><div key={s.name+s.seat} title={s.seat}>
+ <span>{s.name}</span><b className={sign(s.net)}>{s.conflict?'金额不一致 · 查看详情':s.net==null?'净额未知':`${s.net>0?'+':''}${wan(s.net)}`}</b>{s.previous&&<small>含沿用席位</small>}</div>):<span className="muted">—</span>}</td>)}</tr>)}
+ </tbody></table></div><Pager {...pages} label="游资参与股票"/></>:<p className="footnote">{data.status==='pending'?'待披露，披露后展示已匹配的席位。':data.seat_research?.available===false?'该截止时间暂无可用的席位关联资料。':'当前存档尚无匹配记录，不代表没有游资参与。'}</p>}
+ <p className="footnote">公开报道关联，实际账户归属待核实；— 表示该周期无匹配记录，不代表净额为零。</p></section>;
+}
+
 export function LhbBoard({data,error,onStock}:{data?:Listing;error?:string;onStock:OpenStock}){
  return <section id="lhb" className="panel lhb-board"><div className="section-head"><div>
  <h2>龙虎榜</h2><p>沪深 A 股交易公开信息 · {data?.trade_date||'读取日期…'}</p></div></div>
  {error&&<p className="notice">{error}</p>}{!data&&!error&&<p>读取本地存档…</p>}
- {data&&<><Status data={data}/>{data.rows.length===0?<p className="footnote">
+ {data&&<><Status data={data}/>{data.seat_research&&<p className="footnote">{data.seat_research.note} 核验日 {data.seat_research.reviewed_at.slice(0,10)}。</p>}<SeatStockTable data={data} onStock={onStock}/>{data.rows.length===0?<p className="footnote">
  {data.status==='pending'?'来源尚无该日沪深 A 股披露记录，盘后自动复查。':'该交易日暂无可展示的本地记录。'}</p>:
  (Object.keys(groups) as Period[]).map(group=><DisclosureGroup key={data.trade_date+group} group={group} data={data} onStock={onStock}/>)}</>}
  <p className="footnote">涨跌幅使用所选交易日的收盘报价，三日累计列为截至榜单日的三个交易日复合涨跌幅，非涨幅偏离值，亦不保证与异常交易披露的起止区间相同；缺少报价显示 —。先核对新闻里的上涨线索，再从同日非 ST 涨幅榜前 100 名查找同一催化下被报道的股票，含未上龙虎榜者。每项龙虎榜披露单独列示，不同原因或周期的净买额可能重叠。</p></section>;
@@ -87,7 +106,7 @@ function Seats({row,side}:{row:RecordRow;side:'buy'|'sell'}){
  const entries=row[side],state=side==='buy'?row.buy_state:row.sell_state;
  return <div className="lhb-seats"><h4>{side==='buy'?'买入席位':'卖出席位'} <small>{state==='previous'?'沿用上次取得的席位':entries.length+' 条'}</small></h4>
  {entries.length?<table><thead><tr><th>席位</th><th>买入</th><th>卖出</th><th>净买额</th></tr></thead><tbody>
- {entries.map((s,i)=><tr key={i}><td>{i+1}. {s.name}</td><td>{wan(s.buy)}</td><td>{wan(s.sell)}</td><td className={sign(s.net)}>{wan(s.net)}</td></tr>)}
+ {entries.map((s,i)=><tr key={i}><td>{i+1}. {s.name}{s.association?<details className="lhb-seat-evidence"><summary>{s.association.name} · {s.association.level} · 查看依据</summary><p>{s.association.confidence} · 匹配方式 {s.association.match} · 核验日 {s.association.reviewed_at.slice(0,10)}</p>{s.association.sources.map(source=><p key={source.url}>{source.basis}<br/><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} ↗</a></p>)}</details>:<small>未匹配已核验游资资料</small>}</td><td>{wan(s.buy)}</td><td>{wan(s.sell)}</td><td className={sign(s.net)}>{wan(s.net)}</td></tr>)}
  </tbody></table>:<p className="footnote">此项披露的该侧席位尚未取得。</p>}</div>;
 }
 
@@ -120,7 +139,7 @@ export function LhbDrawer({pick:entry,close,onEvent}:{pick:StockPick;close:()=>v
  <h2 ref={heading} tabIndex={-1}>{pick.name} <small>{pick.code}</small></h2>
  {pick.asof&&<p className="footnote">历史截止 {when(pick.asof)}，只显示当时已存档的披露。</p>}
  {error&&<p className="notice">{error}</p>}{!data&&!error&&<p>正在读取披露和相关新闻…</p>}
- {data&&<><Status data={data}/>
+ {data&&<><Status data={data}/>{data.seat_research&&<p className="footnote">{data.seat_research.note} 核验日 {data.seat_research.reviewed_at.slice(0,10)}。</p>}
  {data.stock.rank!=null&&<p>当日非 ST 上涨股第 {data.stock.rank} 名 · 收盘涨幅 <b className="up">+{data.stock.change?.toFixed(2)}%</b></p>}
  {!data.rows.length&&<p className="lhb-empty">{data.status==='published'?'该股当日未上龙虎榜。':data.status==='pending'?'待披露 · 来源尚无该日沪深 A 股榜单。':data.status==='partial'?'当前披露仍待补齐，尚未见该股记录。':states[data.status]}</p>}
  <RelatedStocks data={data} open={id=>onEvent({id,asof:data.news_asof,day:pick.date,origin:'lhb'})} onPick={peer=>setTrail(t=>[...t,{...pick,code:peer.code,name:peer.name}])}/>

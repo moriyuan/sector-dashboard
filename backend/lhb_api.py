@@ -3,6 +3,7 @@ import json
 import math
 from fastapi import APIRouter, HTTPException
 from . import lhb
+from .lhb_seats import annotate, stock_summary
 from .gainer_news import gainers_snapshot, rank_news
 from .move_news import related_moves
 from .news import NewsStore
@@ -54,7 +55,7 @@ def router(store):
     @api.get('')
     def listing(date: date|None=None, asof: datetime|None=None):
         day,cutoff=inputs(date,asof)
-        result=lhb.view(store,day,cutoff)
+        result=annotate(lhb.view(store,day,cutoff),cutoff)
         result['rows']=[{k:v for k,v in row.items() if k not in ('buy','sell')} for row in result['rows']]
         now=cutoff or datetime.now(TZ)
         market=gainers_snapshot(store,day,now) if result['rows'] else (None,None,[])
@@ -63,6 +64,7 @@ def router(store):
         for row in result['rows']:
             row['change']=quotes.get(row['code'],{}).get('change')
             row['three_day_change']=cumulative.get(row['code']) if row['period']=='three' else None
+        result['seat_stocks']=stock_summary(result['rows'])
         result['three_day_window']=window
         result['three_day_revisions']=revisions
         result['gainers_revision']=market[0]
@@ -76,7 +78,7 @@ def router(store):
         if not re.fullmatch(r'[036]\d{5}',code):
             raise HTTPException(422,'请输入沪深 A 股代码')
         day,cutoff=inputs(date,asof)
-        result=lhb.view(store,day,cutoff)
+        result=annotate(lhb.view(store,day,cutoff),cutoff)
         now=cutoff or datetime.now(TZ)
         market=gainers_snapshot(store,day,now)
         result['related']=related_moves(news,day,now,market,result['rows'],{code})[code]

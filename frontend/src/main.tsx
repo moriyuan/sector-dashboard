@@ -19,6 +19,7 @@ import News from './News';
 import DailySummary from './DailySummary';
 import Barra from './Barra';
 import Resonance from './Resonance';
+import SeatBacktest from './SeatBacktest';
 import {LhbDrawer,type StockPick} from './Lhb';
 import type {Opening} from './GainerNews';
 import './research.css';
@@ -80,7 +81,7 @@ function App(){
  const openEvent=(event:Opening)=>{setStockPick(null);setNewsJump(event);setNewsDate(event.day);location.hash='news';};
  const [newsDate,setNewsDate]=useState('');
  const [standalone,setStandalone]=useState(location.hash);
- const dailyView=standalone==='#daily', barraView=standalone==='#barra', resonanceView=standalone==='#resonance', separate=dailyView||barraView||resonanceView;
+ const seatBacktestView=standalone==='#seat-backtest', dailyView=standalone==='#daily', barraView=standalone==='#barra', resonanceView=standalone==='#resonance', separate=seatBacktestView||dailyView||barraView||resonanceView;
  useEffect(()=>{const onHash=()=>{setStandalone(location.hash);setStockPick(null);};window.addEventListener('hashchange',onHash);return()=>window.removeEventListener('hashchange',onHash);},[]);
  const [newsView,setNewsView]=useState(location.hash==='#news');
  useEffect(()=>{const onHash=()=>setNewsView(location.hash==='#news');window.addEventListener('hashchange',onHash);return()=>window.removeEventListener('hashchange',onHash);},[]);
@@ -160,7 +161,7 @@ function App(){
    {title:kind==='industry'?'行业热点':'概念热点',value:hot[0]?.name??'尚无已核实热点',description:hot[0]?'当前筛选下热点强度最高，点击查看同期板块。':'查看评分覆盖和板块分布。',href:'#sectors'},
    {title:'成交额聚焦',value:amountLeaders[0]?.name??'成交占比待核验',description:amountLeaders[0]?'当前筛选下成交额占比居首，可在资金面板核对。':'有效样本不足时留空。',href:'#turnover'}
  ];
- return <><DeskNav midday={midday} daily={dailyView} barra={barraView} resonance={resonanceView} news={newsView} onNews={openNews}>{!newsView&&!separate?<><div className="nav-date"><span>复盘日</span>
+ return <><DeskNav seatBacktest={seatBacktestView} midday={midday} daily={dailyView} barra={barraView} resonance={resonanceView} news={newsView} onNews={openNews}>{!newsView&&!separate?<><div className="nav-date"><span>复盘日</span>
    <ArchivePicker label="交易日期" value={date} dates={options} emptyText={dateHint} snapshots={dates.snapshots.map(d=>d.trade_date)}
      shortcut={{label:dates.snapshots.length?'最新快照':'最新指数日',value:dates.snapshots[0]?.trade_date||options[0]||''}}
      onChange={selectDate} onShortcut={resumeLatest}/></div>
@@ -210,6 +211,7 @@ function App(){
  <SourceStrip/>
  <footer><p>{kind==='concept'?'概念板块成分重叠，成交额及资金流不可跨板块相加；旧东财归档与同花顺概念分别保存。':'一级行业目录使用东方财富原始口径；历史排名基于当前目录中的指数，成分广度统计沪深非ST有效交易股票。'}</p><span>本地研究 · 无交易执行 · {data?.meta.rule_version||'sector-v1.0'}</span></footer>
  </main>}
+ {seatBacktestView&&<SeatBacktest/>}
  {resonanceView&&<Resonance/>}
  {barraView&&<Barra/>}
  {dailyView&&<DailySummary onStock={setStockPick}/>}

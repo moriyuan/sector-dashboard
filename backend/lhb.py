@@ -39,7 +39,7 @@ def read_page(table, day, page):
 
 
 def report_rows(table, day, fetch_page=read_page):
-    rows,seen = [],set()
+    rows,seen = [],{}
     page,pages,total = 1,1,None
     while page<=pages:
         obj = fetch_page(table,day,page)
@@ -58,9 +58,14 @@ def report_rows(table, day, fetch_page=read_page):
             key = (str(row['TRADE_ID']),)
             if table!='summary':
                 key += tuple(row.get(k) for k in ('OPERATEDEPT_CODE','OPERATEDEPT_NAME','BUY','SELL'))
-            if key in seen:
+            # Anonymous institutions can occupy distinct ranked slots with identical
+            # amounts. Preserve those slots within a page. Cross-page overlap remains
+            # ambiguous and must not silently pass the pagination integrity check.
+            anonymous = (table!='summary' and row.get('OPERATEDEPT_NAME')=='机构专用'
+                         and str(row.get('OPERATEDEPT_CODE')) in ('0','None',''))
+            if key in seen and not (anonymous and seen[key]==page):
                 raise ValueError('东财分页重复')
-            seen.add(key)
+            seen[key]=page
             rows.append(row)
         page+=1
     if len(rows)!=total:
@@ -109,7 +114,7 @@ def seats(rows, heads, side, excluded):
         if (head['code']!=row['SECURITY_CODE'] or row['EXPLANATION']!=head['reason']
                 or row['SECUCODE']!=head['code']+'.'+head['market'] or not row.get('OPERATEDEPT_NAME')):
             raise ValueError('席位与披露编号、证券或原因不匹配')
-        result[key].append(dict(name=row['OPERATEDEPT_NAME'],buy=amount(row.get('BUY')),
+        result[key].append(dict(name=row['OPERATEDEPT_NAME'],seat_code=str(row.get('OPERATEDEPT_CODE') or ''),buy=amount(row.get('BUY')),
                                 sell=amount(row.get('SELL')),net=amount(row.get('NET'))))
     for entries in result.values():
         entries.sort(key=lambda x:(x[side] is None,-(x[side] or 0),x['name']))
