@@ -15,7 +15,7 @@ from .store import TZ
 
 FIELDS = 'f2,f3,f6,f8,f12,f13,f14,f18,f104,f105,f106,f124'
 STOCK_FIELDS = 'f2,f3,f6,f8,f12,f13,f14,f18,f124'
-INDEX_SYMBOLS = ('sh000001', 'sz399001', 'sz399006', 'sh000300', 'sh000680')
+INDEX_SYMBOLS = ('sh000001', 'sz399001', 'sz399006', 'sh000300', 'sh000680', 'sh000905', 'sh000852')
 STOCK_FILTER = 'm:0+t:6+f:!2,m:0+t:80+f:!2,m:1+t:2+f:!2,m:1+t:23+f:!2'
 
 

@@ -16,7 +16,7 @@ export default function EtfTracker({date,refresh}:{date:string;refresh:number}){
   fetch('api/etf-tracker?'+new URLSearchParams({date}),{signal:control.signal})
    .then(r=>{if(!r.ok)throw Error();return r.json();})
    .then(data=>{if(!control.signal.aborted)setState({day:date,data});})
-   .catch(()=>{if(!control.signal.aborted)setState({day:date,error:'宽基 ETF 存档暂不可用'});});
+   .catch(()=>{if(!control.signal.aborted)setState(previous=>({day:date,data:previous.day===date?previous.data:undefined,error:'宽基 ETF 更新失败；保留已有存档，稍后自动重试。'}));});
   return()=>control.abort();
  },[date,refresh]);
  const data=state.day===date?state.data:undefined;

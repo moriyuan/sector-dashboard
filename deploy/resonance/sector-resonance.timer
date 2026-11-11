@@ -1,0 +1,11 @@
+[Unit]
+Description=Capture public minute data and archive daily index resonance
+
+[Timer]
+OnCalendar=*-*-* 18:10:00 Asia/Shanghai
+OnCalendar=*-*-* 22:15:00 Asia/Shanghai
+Persistent=true
+Unit=sector-resonance.service
+
+[Install]
+WantedBy=timers.target

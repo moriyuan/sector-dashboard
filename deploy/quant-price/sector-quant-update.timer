@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh close factor archive after public source publication
+
+[Timer]
+OnCalendar=*-*-* 08:10:00 Asia/Shanghai
+OnCalendar=*-*-* 20:40:00 Asia/Shanghai
+OnCalendar=*-*-* 23:10:00 Asia/Shanghai
+Persistent=true
+Unit=sector-quant-update.service
+
+[Install]
+WantedBy=timers.target

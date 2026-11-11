@@ -51,10 +51,10 @@ def test_daily_bar_validation_and_units():
         Stub([{'data':{'code':'BK0000','klines':[bar]}}]).bars('BK0475')
 
 
-def test_index_sources_request_shanghai_star_composite(monkeypatch):
+def test_index_sources_request_all_dashboard_indices(monkeypatch):
     from backend.public_data import PublicData
 
-    codes=['000001','399001','399006','000300','000680']
+    codes=['000001','399001','399006','000300','000680','000905','000852']
     captured={}
     em=Stub([])
     def get(url,params):
@@ -62,11 +62,11 @@ def test_index_sources_request_shanghai_star_composite(monkeypatch):
         return {'data':{'diff':[{'f12':c,'f13':0 if c.startswith('399') else 1} for c in codes]}}
     monkeypatch.setattr(em,'get',get)
     assert [r['code'] for r in em.indices()]==codes
-    assert captured['secids']==['1.000001','0.399001','0.399006','1.000300','1.000680']
+    assert captured['secids']==['1.000001','0.399001','0.399006','1.000300','1.000680','1.000905','1.000852']
 
     qq=PublicData(None,target_date='2026-11-02')
     def quotes(symbols):
-        assert list(symbols)==['sh000001','sz399001','sz399006','sh000300','sh000680']
+        assert list(symbols)==['sh000001','sz399001','sz399006','sh000300','sh000680','sh000905','sh000852']
         return [{'code':s[2:],'source_time':'2026-11-02T16:14:12+08:00'} for s in symbols]
     monkeypatch.setattr(qq,'quotes',quotes)
     assert [r['code'] for r in qq.indices()]==codes

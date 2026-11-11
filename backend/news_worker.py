@@ -157,10 +157,19 @@ def run(once=False,limit=20,mapping=False):
  key=os.getenv('DEEPSEEK_API_KEY','');stop=threading.Event();load_mapping(n)
  signal.signal(signal.SIGTERM,lambda *_:stop.set());signal.signal(signal.SIGINT,lambda *_:stop.set())
  if mapping:verify_mapping(n)
+ from .daily import DailyStore, collect_due, analyze_one
+ daily=DailyStore(store)
+ def daily_loop():
+  while not stop.is_set():
+   try:collect_due(daily)
+   except Exception as exc:print('daily summary cycle:',type(exc).__name__,flush=True)
+   stop.wait(60)
  def analysis_loop():
   worker=NewsStore(store)
   while not stop.is_set():
-   try:analyze_batch(worker,key,limit,stop)
+   try:
+    analyze_one(daily,worker,key)
+    if not stop.is_set():analyze_batch(worker,key,limit,stop)
    except Exception as exc:print('analysis cycle:',type(exc).__name__,flush=True)
    stop.wait(10)
  def rank_loop():
@@ -170,8 +179,10 @@ def run(once=False,limit=20,mapping=False):
     print('rank news cycle:',type(exc).__name__,flush=True);did_work=False
    stop.wait(3 if did_work else 60)
  rank_thread=None
+ daily_thread=None
  thread=None
  if not once:
+  daily_thread=threading.Thread(target=daily_loop,daemon=True);daily_thread.start()
   rank_thread=threading.Thread(target=rank_loop,daemon=True);rank_thread.start()
   thread=threading.Thread(target=analysis_loop,daemon=True);thread.start()
  maintenance=0
@@ -194,6 +205,7 @@ def run(once=False,limit=20,mapping=False):
    maintenance=time.time()
   if once:break
   stop.wait(5)
+ if daily_thread:daily_thread.join(timeout=30)
  if rank_thread:rank_thread.join(timeout=30)
  if thread:thread.join(timeout=85)
 
