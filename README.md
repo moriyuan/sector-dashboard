@@ -2,6 +2,20 @@
 
 独立本地应用：React、TypeScript、Ant Design、ECharts、FastAPI、SQLite。仅监听 `127.0.0.1`，不涉及账户、订单或内部数据服务；现有研究脚本不受影响。
 
+## 通达信行情渠道
+
+安装项目依赖和通达信可选依赖后，可用独立命令查询通达信沪深标准行情并输出 JSON。
+
+```powershell
+python -m pip install -r requirements.txt -r requirements-tdx.txt
+python -m backend.sources.tdx sh600519 --count 5
+python -m backend.sources.tdx sh000001 --period 1m --count 20
+```
+
+使用 `sh` / `sz` 前缀标明市场，例如 `sh000001` 是上证指数，`sz000001` 是平安银行。`--period day` 为日 K，`--period 1m` 为一分钟 K，单次最多 800 条。`--offset` 从最新记录向历史偏移，按实际返回条数和交易日期验收。数据按时间升序，带来源、实际节点、采集时间和不复权标记。成交量保留渠道字段口径，跨证券或跨周期使用前先核对单位。指数 K 线的涨跌家数为该接口返回的指数统计。最近一根可能仍在形成，研究收盘数据时按交易日和时段筛选。
+
+通达信取数使用 TCP 行情节点。可用 `SECTOR_TDX_SERVERS` 或 `--servers` 指定逗号分隔的 `host:port` 列表，失败时依次尝试下一节点。Python 调用入口是 `backend.sources.tdx.TdxSource.fetch_bars`。通达信数据通过独立入口查询，现有定时任务和复盘主库使用各自原有的数据源。
+
 ## 启动
 
 当前采集与新闻分析部署在腾讯云上海 Ubuntu-RBAR，访问
