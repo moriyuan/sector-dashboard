@@ -78,6 +78,17 @@ def test_insufficient_sessions_refuses_guessing(tmp_path):
             retained_days(d,3,'2026-11-07')
 
 
+def test_benchmark_parquet_retains_cutoff_and_later_rows(tmp_path):
+    import pandas as pd
+    path=tmp_path/'quant-price-sources/benchmark.parquet'
+    path.parent.mkdir()
+    frame=pd.DataFrame({'date':['2026-11-09','2026-11-10','2026-11-11'],
+                        'return':[0.01,-0.02,0.03]})
+    frame.to_parquet(path,index=False)
+    prune_files(tmp_path,'2026-11-10')
+    pd.testing.assert_frame_equal(pd.read_parquet(path),frame.iloc[1:].reset_index(drop=True))
+
+
 def test_compressed_backup_is_lossless_and_replaces_only_its_target(tmp_path):
     import gzip
     import hashlib
