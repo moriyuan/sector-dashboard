@@ -10,16 +10,11 @@ import {ArchivePicker,DeskProvider,DetailDrawer} from './DeskUI';
 import './style.css';
 import {DeskNav,Cover,Chapter,NotesDeck,Pager,SignalTab,usePages,SourceStrip,EndAction,useDeskRefresh} from './ResearchLayout';
 import Gainers from './Gainers';
-import EtfTracker from './EtfTracker';
-import IndexPe,{type IndexPeRow} from './IndexPe';
-import MarginTrend,{type Financing} from './MarginTrend';
 import {chooseSnapshot,snapshotChanged,type SnapshotMode,type SnapshotChoice} from './archiveSelection';
 import {CapitalFlow, FlowPeriods, type Flow} from './CapitalFlow';
 import News from './News';
-import DailySummary from './DailySummary';
-import Barra from './Barra';
 import Resonance from './Resonance';
-import SeatBacktest from './SeatBacktest';
+import SeatStocks from './SeatStocks';
 import {LhbDrawer,type StockPick} from './Lhb';
 import type {Opening} from './GainerNews';
 import './research.css';
@@ -31,7 +26,7 @@ type Meta = {trade_date:string;mode:string;source_time:string|null;collected_at:
 type Sector = {membership_verified?:boolean;vendor_up:Nullable;vendor_down:Nullable;vendor_flat:Nullable;code:string;name:string;change:Nullable;amount:Nullable;price:Nullable;return_5:Nullable;return_10:Nullable;return_20:Nullable;heat:Nullable;up_ratio:Nullable;coverage:Nullable;member_count:Nullable;eligible_count:Nullable;amount_share:Nullable;share_change:Nullable;drawdown:Nullable;streak:Nullable;top_days_10:Nullable;rank:Nullable;rank_change:Nullable;flow:Flow|null;labels:string[];rule_evidence:string[];heat_inputs:{daily:Nullable;prior_5:Nullable;breadth:Nullable};matrix:{date:string;change:Nullable;percentile:Nullable}[]};
 type Listing = {meta:Meta;rows:Sector[];scope:string;quote_coverage?:number;history_coverage?:number;components?:{stocks:Meta;market:Meta;flow:Meta}};
 type Stats = {quote_coverage:Nullable;quote_limit_up:Nullable;quote_limit_down:Nullable;limit_price_coverage:Nullable;up:number;down:number;flat:number;up_ratio:Nullable;eligible:number;amount:Nullable;coverage:Nullable;total:number;st:{up:number;down:number;flat:number;eligible:number};distribution:number[]};
-type Market = {meta:Meta;indices_meta:Meta;stats:Stats|null;indices:{code:string;name:string;price:Nullable;change:Nullable}[];emotion:{limit_up:Nullable;limit_down:Nullable;broken:Nullable;broken_ratio:Nullable;max_boards:Nullable}|null;emotion_meta:Meta;index_pe?:IndexPeRow[];financing?:Financing};
+type Market = {meta:Meta;indices_meta:Meta;stats:Stats|null;indices:{code:string;name:string;price:Nullable;change:Nullable}[];emotion:{limit_up:Nullable;limit_down:Nullable;broken:Nullable;broken_ratio:Nullable;max_boards:Nullable}|null;emotion_meta:Meta};
 type Stock={code:string;name:string;change:Nullable;amount:Nullable;price:Nullable;boards:Nullable};
 type Detail={ths_evidence?:{leader:{code:string;name:string;url:string}|null;sample:Stock[];pages:{page:number;url:string}[];total_pages:number|null;complete:boolean}|null;membership_meta?:{source:string;source_time:string|null;captured_at:string;verified:boolean;reported_count:number;expected_count:number|null};components?:{stocks:Meta;market:Meta;flow:Meta};meta:Meta;sector:Sector;bars:{date:string;close:number;amount:number}[];members:Stock[];members_available:boolean;flow_history:({date:string}&Flow)[];limit_up:Stock[]|null};
 type Status={phase:string;server_time:string;collecting:boolean;events:{job:string;ok:number;time:string;message:string;stale:boolean}[]};
@@ -81,7 +76,7 @@ function App(){
  const openEvent=(event:Opening)=>{setStockPick(null);setNewsJump(event);setNewsDate(event.day);location.hash='news';};
  const [newsDate,setNewsDate]=useState('');
  const [standalone,setStandalone]=useState(location.hash);
- const seatBacktestView=standalone==='#seat-backtest', dailyView=standalone==='#daily', barraView=standalone==='#barra', resonanceView=standalone==='#resonance', separate=seatBacktestView||dailyView||barraView||resonanceView;
+ const seatStocksView=standalone==='#seat-stocks'||standalone==='#seat-backtest', resonanceView=standalone==='#resonance', separate=seatStocksView||resonanceView;
  useEffect(()=>{const onHash=()=>{setStandalone(location.hash);setStockPick(null);};window.addEventListener('hashchange',onHash);return()=>window.removeEventListener('hashchange',onHash);},[]);
  const [newsView,setNewsView]=useState(location.hash==='#news');
  useEffect(()=>{const onHash=()=>setNewsView(location.hash==='#news');window.addEventListener('hashchange',onHash);return()=>window.removeEventListener('hashchange',onHash);},[]);
@@ -161,16 +156,16 @@ function App(){
    {title:kind==='industry'?'行业热点':'概念热点',value:hot[0]?.name??'尚无已核实热点',description:hot[0]?'当前筛选下热点强度最高，点击查看同期板块。':'查看评分覆盖和板块分布。',href:'#sectors'},
    {title:'成交额聚焦',value:amountLeaders[0]?.name??'成交占比待核验',description:amountLeaders[0]?'当前筛选下成交额占比居首，可在资金面板核对。':'有效样本不足时留空。',href:'#turnover'}
  ];
- return <><DeskNav seatBacktest={seatBacktestView} midday={midday} daily={dailyView} barra={barraView} resonance={resonanceView} news={newsView} onNews={openNews}>{!newsView&&!separate?<><div className="nav-date"><span>复盘日</span>
+ return <><DeskNav seatStocks={seatStocksView} midday={midday} resonance={resonanceView} news={newsView} onNews={openNews}>{!newsView&&!separate?<><div className="nav-date"><span>复盘日</span>
    <ArchivePicker label="交易日期" value={date} dates={options} emptyText={dateHint} snapshots={dates.snapshots.map(d=>d.trade_date)}
      shortcut={{label:dates.snapshots.length?'最新快照':'最新指数日',value:dates.snapshots[0]?.trade_date||options[0]||''}}
      onChange={selectDate} onShortcut={resumeLatest}/></div>
    <Segmented className="snapshot-mode" aria-label="快照时段" value={mode} options={[{value:'midday',label:'午间'},{value:'close',label:'收盘'}]} onChange={next=>{pinSelection();applySnapshot({date,mode:next as SnapshotMode});}}/>
    <Button type="primary" className="desk-refresh" loading={loading} onClick={()=>setRefresh(v=>v+1)}>刷新</Button></>:<a className="nav-back" href="#overview">市场总览 ↗</a>}</DeskNav>
- {!separate&&<main id="top" className="research-page overflow-x-hidden w-full max-w-full" style={{display:newsView||dailyView?'none':undefined}}>
+ {!separate&&<main id="top" className="research-page overflow-x-hidden w-full max-w-full" style={{display:newsView?'none':undefined}}>
  <div className="cache-update-line" role="status"><Button className="follow-latest" size="small" type={followLatest?'text':'default'} aria-pressed={followLatest} onClick={resumeLatest}>{followLatest?'● 跟随最新':'跟随最新'}</Button><span>{followLatest?'每 60 秒读取归档缓存':'已固定日期 / 时段 · 每 60 秒核对缓存'}{lastRead&&` · 上次读取 ${lastRead}`}</span>{status?.collecting===false&&<span>只读存档 · 不自动采集</span>}{dateError&&<span className="warning">{dateError}</span>}</div>
  <Cover title={midday?"A 股午间复盘":"A 股盘后复盘"} description="从市场环境和板块强弱，追踪领涨个股的披露与报道。" actions={[{label:'查看市场环境',href:'#overview'},{label:'定位领涨个股',href:'#gainers'}]}/>
- {midday&&<div className="notice" role="status">午间快照 · 交易日北京时间 12:00 采集上午行情；热点与涨跌状态为暂定，连续强势天数仅计算此前收盘。炸板、连板梯队、龙虎榜及 ETF 份额资金数据在收盘视图查看。</div>}
+ {midday&&<div className="notice" role="status">午间快照 · 交易日北京时间 12:00 采集上午行情；热点与涨跌状态为暂定，连续强势天数仅计算此前收盘。炸板、连板梯队、龙虎榜数据在收盘视图查看。</div>}
  <section id="overview" className="chapter-block"><Chapter title="市场环境" copy={['先看主要指数与市场广度，','再核对涨跌停、炸板和连板高度。']} aside={<span className="phase-note">{snapshotName}快照{midday?' · 暂定':''} · {historical?'历史复盘':phases[status?.phase||'']||'连接本地服务'} · {data?.meta.trade_date||date||'日期待定'}</span>}/>
  <div className="index-strip">{indexStrip.map(([code,name])=>{
    const index=market?.indices.find(i=>i.code===code);
@@ -180,8 +175,6 @@ function App(){
  <div className="metrics"><div className="metric wide"><span>市场成交额</span><strong>{amt(stats?.amount)}</strong><small>沪深 A 股 · 含 ST · 有效报价</small></div><div className="metric wide"><span>上涨 / 下跌</span><strong><b className="up">{fmt(stats?.up,0)}</b><em>/</em><b className="down">{fmt(stats?.down,0)}</b></strong><div className="breadth-track"><i style={{width:`${stats?.up_ratio??0}%`}}/></div><small>平盘 {fmt(stats?.flat,0)} · ST 涨 {fmt(stats?.st.up,0)} / 跌 {fmt(stats?.st.down,0)}</small></div><div className="metric"><span>{fullLimits?'涨停 / 跌停':'池中涨停 / 跌停'}</span><strong><b className="up">{fmt(fullLimits?stats?.quote_limit_up:emotion?.limit_up,0)}</b><em>/</em><b className="down">{fmt(fullLimits?stats?.quote_limit_down:emotion?.limit_down,0)}</b></strong><small>{fullLimits?'源涨跌停价判定 · 非ST':'供应商池覆盖 · 非ST'}</small></div><div className="metric"><span>炸板率</span><strong>{emotion?.broken_ratio==null?'—':`${fmt(emotion.broken_ratio,1)}%`}</strong><small>{midday?'午间不采集情绪池':'东财池：未封住 / 当日曾涨停'}</small></div><div className="metric"><span>最高连板</span><strong>{fmt(emotion?.max_boards,0)}<small>板</small></strong><small>{midday?'待收盘情绪池归档':'东财池 · 非ST，科创板可能未收录'}</small></div></div>
  <div className="market-bento grid-flow-dense"><section className="breadth-card"><h3>涨跌分布</h3> {stats?<Chart height={150} option={{grid:{left:40,right:20,top:10,bottom:30},tooltip:{trigger:'axis'},xAxis:{type:'category',data:['<-7%','-7~-3%','-3~0%','平盘','0~3%','3~7%','≥7%']},yAxis:{type:'value',minInterval:1},series:[{type:'bar',data:stats.distribution.map((v,i)=>({value:v,itemStyle:{color:i<3?'#6da58f':i>3?'#ce887e':'#b9bcb3'}}))}]}}/>:<Empty title="暂无涨跌分布" text="等待该日市场广度快照。"/>}</section><NotesDeck notes={notes}/></div>
  <p className="footnote">指数 {market?.indices_meta?.source} · {timeText(market?.indices_meta?.source_time)} / 广度 {market?.meta.source} · {timeText(market?.meta.source_time)} · 情绪池源 {timeText(market?.emotion_meta.source_time)} / 采集 {timeText(market?.emotion_meta.collected_at)} · {snapshotName}报价覆盖 {stats?.quote_coverage==null?'未知':`${fmt(stats.quote_coverage*100,1)}%`} · 有效交易占比 {stats?.coverage==null?'未知':`${fmt(stats.coverage*100,1)}%`}</p>
- <IndexPe rows={market?.index_pe}/>
- <MarginTrend data={market?.financing} loading={loading} error={!!error}/>
  </section>
  <section id="sectors" className="chapter-block"><Chapter title="板块强弱" copy={['查看成交集中的位置，','用成分广度和历史排名核对热点与退潮。']}/>
  <div className="toolbar"><Toggle options={[["industry","一级行业"],["concept","同花顺概念"]]} value={kind} onChange={v=>{setData(null);setMarket(null);setKind(v);setConceptSource('ths');setSelected(null);}}/><div className="toolbar-right"><Input allowClear className="board-search" aria-label="搜索板块" placeholder="搜索板块或代码" value={query} onChange={e=>setQuery(e.target.value)}/></div></div>
@@ -202,7 +195,6 @@ function App(){
  <div className="lower-grid grid-flow-dense"><section className="panel" id="rotation"><Heading title="持续性与轮动" subtitle={midday?'此前 20 个完整交易日 · 当前排序前 14 个板块':'最近 20 个交易日 · 当前排序前 14 个板块'}/>{matrixRows.some(r=>r.matrix.some(m=>m.change!=null))?<Chart option={matrixOption} height={44+24*matrixRows.length} onClick={pick}/>:filterHint||<Empty title="轮动矩阵等待历史回补" text="指数日线目标回补 250 个交易日；缺少的日期保留空格。"/>}<p className="footnote">强势次数与连续天数依据同类板块每日涨幅前 20%，仅使用已完成的收盘数据。</p></section>
  <CapitalFlow rows={rows} sourceTime={timeText(data?.components?.flow.source_time)} ths={kind==='concept'&&conceptSource==='ths'} filterHint={filterHint} onSelect={setSelected}/>
  <section id="turnover" className="panel turnover-panel"><Heading title="成交额聚焦" subtitle="按市场成交额占比排序 · 变化单位为百分点"/><div className="share-section">{amountLeaders.length?amountLeaders.map(r=><button key={r.code} onClick={()=>setSelected(r.code)}><span>{r.name}</span><b>{fmt(r.amount_share)}%</b><small className={color(r.share_change)}>{r.share_change==null?'—':`${r.share_change>0?'+':''}${fmt(r.share_change)}pp`}</small></button>):filterHint||<p className="muted">等待完整成分与同日市场成交额，计算占比。</p>}</div></section></div>
- {!midday&&<EtfTracker date={date} refresh={refresh}/>}
  </section>
  <section className="chapter-block"><Chapter title="个股与披露" copy={midday?['查看上午领涨股票，','收盘后再核对披露与上涨依据。']:['从收盘涨幅榜选股，','按同一日期查上榜原因、席位与相关新闻。']}/>
  <Gainers key={date+':'+mode} mode={mode} onStock={setStockPick} onNews={()=>{setNewsJump(null);setNewsDate(date);location.hash='news';}} date={date} refresh={refresh} kind={kind} conceptSource={conceptSource} boards={data?.rows||[]} onBoard={(code,k,revision,source)=>{if(k==='concept')setConceptSource(source);if(k!==kind){setData(null);setMarket(null);setKind(k);}setDetailRevision(revision);setSelectedRaw(code);}}/>
@@ -211,12 +203,10 @@ function App(){
  <SourceStrip/>
  <footer><p>{kind==='concept'?'概念板块成分重叠，成交额及资金流不可跨板块相加；旧东财归档与同花顺概念分别保存。':'一级行业目录使用东方财富原始口径；历史排名基于当前目录中的指数，成分广度统计沪深非ST有效交易股票。'}</p><span>本地研究 · 无交易执行 · {data?.meta.rule_version||'sector-v1.0'}</span></footer>
  </main>}
- {seatBacktestView&&<SeatBacktest/>}
+ {seatStocksView&&<SeatStocks/>}
  {resonanceView&&<Resonance/>}
- {barraView&&<Barra/>}
- {dailyView&&<DailySummary onStock={setStockPick}/>}
  {newsView&&<News key={newsJump?.id+':'+newsJump?.asof} initialOpening={newsJump} onStock={setStockPick} initialDate={newsDate} onBoard={(b,k,d,revision,source)=>{pinSelection();applySnapshot({date:d,mode:'close'});setKind(k);if(k==='concept')setConceptSource(source);setDetailRevision(revision);setSelectedRaw(b.code);}}/>}
- {stockPick&&(!midday||newsView||dailyView)&&<LhbDrawer pick={stockPick} close={()=>setStockPick(null)} onEvent={openEvent}/>}
+ {stockPick&&(!midday||newsView)&&<LhbDrawer pick={stockPick} close={()=>setStockPick(null)} onEvent={openEvent}/>}
  {selected&&<DetailDrawer title="板块详情" label="板块详情" closeLabel="关闭详情" size={750} onClose={()=>setSelected(null)}>{detail?<><div className="detail-title"><div><span className="eyebrow">{detail.sector.code} · {detail.meta.trade_date} · {snapshotName}{midday?'暂定':''}</span><h2>{detail.sector.name}</h2><div className="tags">{detail.sector.labels.map(l=><span className={`tag ${l}`} key={l}>{labelNames[l]}</span>)}</div></div><strong className={color(detail.sector.change)}>{pct(detail.sector.change)}</strong></div><p className="footnote">源 {timeText(detail.meta.source_time)} · 修订 {detail.meta.revision??'仅指数历史'}</p><div className="detail-metrics"><div><span>热点强度</span><b>{fmt(detail.sector.heat,1)}</b></div><div><span>上涨比例</span><b>{detail.sector.up_ratio==null?'—':`${fmt(detail.sector.up_ratio,0)}%`}</b></div><div><span>距20日高点</span><b className={color(detail.sector.drawdown)}>{pct(detail.sector.drawdown)}</b></div><div><span>有效 / 成分</span><b>{fmt(detail.sector.eligible_count,0)} / {fmt(detail.sector.member_count,0)}</b></div></div>
  <h3>指数走势 <small>供应商收盘指数 · 不复权{midday?' · 截至前一交易日':''}</small></h3>{detail.bars.length?<Chart height={230} option={{grid:{left:55,right:15,top:20,bottom:28},tooltip:{trigger:'axis'},xAxis:{type:'category',data:detail.bars.map(b=>b.date),axisLabel:{color:'#8c8f86'}},yAxis:{type:'value',scale:true,splitLine:{lineStyle:{color:'#eeefea'}}},series:[{name:'收盘点位',type:'line',showSymbol:false,data:detail.bars.map(b=>b.close),lineStyle:{color:'#535e50',width:2}}]}}/>:<Empty title="该板块日线尚未回补"/>}
  <p className="footnote">供应商原始成分计数：上涨 {fmt(detail.sector.vendor_up,0)} / 下跌 {fmt(detail.sector.vendor_down,0)} / 平盘 {fmt(detail.sector.vendor_flat,0)}。未经沪深、ST 与有效报价筛选，不代替评分广度。</p><h3>规则与证据</h3><div className="evidence">{detail.sector.rule_evidence.length?detail.sector.rule_evidence.map(t=><p key={t}>{t}</p>):<p>当前未满足标签条件，或必要数据不足。</p>}<p>评分输入百分位：当日 {fmt(detail.sector.heat_inputs.daily,1)} / 前5日 {fmt(detail.sector.heat_inputs.prior_5,1)} / 广度 {fmt(detail.sector.heat_inputs.breadth,1)}</p><p>成分覆盖 {detail.sector.coverage==null?'未知':`${fmt(detail.sector.coverage*100,0)}%`} · 连续强势 {fmt(detail.sector.streak,0)} 日 · 近10日强势 {fmt(detail.sector.top_days_10,0)} 次</p></div>

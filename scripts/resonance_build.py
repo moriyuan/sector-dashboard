@@ -12,7 +12,7 @@ import warnings
 
 import numpy as np
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from backend.quant_price import daily_data
+from backend.daily_prices import daily_data
 from backend.resonance import BENCHMARKS,CLOCK,VERSION,analyze,parse_day
 
 

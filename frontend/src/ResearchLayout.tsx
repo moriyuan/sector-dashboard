@@ -6,13 +6,13 @@ import {Pagination} from 'antd';
 
 gsap.registerPlugin(useGSAP,ScrollTrigger);
 
-const destinations=[['overview','市场'],['sectors','板块'],['rotation','轮动'],['capital','资金'],['national-team','宽基ETF'],
-  ['gainers','个股'],['lhb','龙虎榜'],['seat-backtest','游资回测'],['resonance','指数共振'],['barra','因子收益'],['daily','每日汇总'],['news','新闻']] as const;
+const destinations=[['overview','市场'],['sectors','板块'],['rotation','轮动'],['capital','资金'],
+  ['gainers','个股'],['lhb','龙虎榜'],['seat-stocks','游资股票'],['resonance','指数共振'],['news','新闻']] as const;
 
-export function DeskNav({news,seatBacktest=false,daily=false,barra=false,resonance=false,midday=false,children,onNews}:{news:boolean;seatBacktest?:boolean;daily?:boolean;barra?:boolean;resonance?:boolean;midday?:boolean;children:ReactNode;onNews:()=>void}){
+export function DeskNav({news,seatStocks=false,resonance=false,midday=false,children,onNews}:{news:boolean;seatStocks?:boolean;resonance?:boolean;midday?:boolean;children:ReactNode;onNews:()=>void}){
  const [active,setActive]=useState('overview');
  useEffect(()=>{
-   if(news||seatBacktest||daily||barra||resonance)return;
+   if(news||seatStocks||resonance)return;
    const sync=()=>{
      const headings=destinations.filter(([id])=>id!=='news').map(([id])=>document.getElementById(id)).filter((el):el is HTMLElement=>!!el);
      const before=headings.filter(el=>el.getBoundingClientRect().top<=135);
@@ -49,11 +49,11 @@ export function DeskNav({news,seatBacktest=false,daily=false,barra=false,resonan
    follow();window.addEventListener('hashchange',follow);window.addEventListener('scroll',schedule,{passive:true});
    return()=>{layout.disconnect();release();inputs.forEach(event=>window.removeEventListener(event,release));
      window.removeEventListener('hashchange',follow);window.removeEventListener('scroll',schedule);cancelAnimationFrame(raf);};
- },[news,seatBacktest,daily,barra,resonance,midday]);
+ },[news,seatStocks,resonance,midday]);
  return <header className="desk-nav"><div className="nav-inner">
  <a className="desk-brand" href="#top" aria-label="复盘研究台首页"><svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="7"/><path d="M8 22h4v5H8zm7-9h4v14h-4zm7-6h4v20h-4z" fill="currentColor"/></svg><b>复盘研究台</b></a>
- <nav className="desk-links" aria-label="复盘导航">{destinations.filter(([id])=>!midday||(id!=='national-team'&&id!=='lhb')).map(([id,label])=><a key={id} href={'#'+id}
- aria-current={(seatBacktest?id==='seat-backtest':resonance?id==='resonance':barra?id==='barra':daily?id==='daily':news?id==='news':id===active)?'location':undefined} onClick={id==='news'?onNews:undefined}>{label}</a>)}</nav>
+ <nav className="desk-links" aria-label="复盘导航">{destinations.filter(([id])=>!midday||id!=='lhb').map(([id,label])=><a key={id} href={'#'+id}
+ aria-current={(seatStocks?id==='seat-stocks':resonance?id==='resonance':news?id==='news':id===active)?'location':undefined} onClick={id==='news'?onNews:undefined}>{label}</a>)}</nav>
  <div className="nav-tools">{children}</div></div></header>;
 }
 

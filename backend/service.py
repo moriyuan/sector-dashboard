@@ -346,15 +346,6 @@ class Collector:
         self.thread.start()
         self.lhb_thread = threading.Thread(target=run_scheduler,args=(self.store,self.stop),daemon=True,name='lhb-collector')
         self.lhb_thread.start()
-        from .etf_tracker import run_scheduler as run_etf
-        self.etf_thread=threading.Thread(target=run_etf,args=(self.store,self.stop),daemon=True,name='broad-etf')
-        self.etf_thread.start()
-        from .financing import run_scheduler as run_financing
-        self.financing_thread=threading.Thread(target=run_financing,args=(self.store,self.stop),daemon=True,name='financing')
-        self.financing_thread.start()
-        from .index_pe import run_scheduler as run_index_pe
-        threading.Thread(target=run_index_pe, args=(self.store, self.stop),
-                         daemon=True, name='index-pe').start()
 
     def shutdown(self):
         self.stop.set()

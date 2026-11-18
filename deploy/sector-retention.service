@@ -1,0 +1,13 @@
+[Unit]
+Description=Retain three archived trading sessions and compact dashboard databases
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/sector-dashboard/venv/bin/python /opt/sector-dashboard-maintenance/retention_maintenance.py
+Environment=PYTHONPATH=/opt/sector-dashboard/quant-worker-libs
+TimeoutStartSec=1800
+MemoryMax=768M
+CPUQuota=75%
+Nice=10
+UMask=0077

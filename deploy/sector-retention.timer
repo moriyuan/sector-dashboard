@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily three-session retention for Shanghai dashboards
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 Asia/Shanghai
+Persistent=true
+Unit=sector-retention.service
+
+[Install]
+WantedBy=timers.target

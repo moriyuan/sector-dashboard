@@ -82,7 +82,7 @@ function SeatStockTable({data,onStock}:{data:Listing;onStock:OpenStock}){
  const periods:Period[]=rows.some(r=>r.periods.other?.length)?['single','three','other']:['single','three'];
  const names=new Set(rows.flatMap(r=>Object.values(r.periods).flatMap(seats=>seats.map(s=>s.name))));
  return <section className="lhb-seat-stocks" aria-label="游资参与股票汇总">
- <a className="lhb-backtest-link" href="#seat-backtest">查看历史跟随回测 ↗</a><h3>游资参与股票汇总 <small>{rows.length} 只股票 · {names.size} 组关联席位</small></h3>
+ <a className="lhb-stocks-link" href="#seat-stocks">查看全部游资参与股票 ↗</a><h3>游资参与股票汇总 <small>{rows.length} 只股票 · {names.size} 组关联席位</small></h3>
  <p className="footnote">{data.trade_date} · 席位净买额（万元），＋净买入／−净卖出。重复披露去重，单日与三日累计不可相加；点击股票核对席位与关联依据。</p>
  {rows.length?<><div className="table-wrap"><table><thead><tr><th>股票</th><th className="lhb-change">当日涨跌幅</th>{periods.map(p=><th key={p}>{groups[p]} · 关联游资及净买额</th>)}</tr></thead><tbody>
  {pages.visible.map(row=><tr key={row.code}><td><button className="lhb-stock-link" onClick={()=>onStock({code:row.code,name:row.name,date:data.trade_date})}>{row.name}</button><small>{row.code}</small></td><td className={`lhb-change ${sign(row.change)}`}>{change(row.change)}</td>

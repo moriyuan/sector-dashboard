@@ -6,23 +6,13 @@ from .service import Collector
 
 def main():
     parser = argparse.ArgumentParser(description='公开板块数据采集与历史回补')
-    parser.add_argument('command',choices=['collect','backfill','probe','import-browser','recover','collect-ths','collect-lhb','collect-etf'])
+    parser.add_argument('command',choices=['collect','backfill','probe','import-browser','recover','collect-ths','collect-lhb'])
     parser.add_argument('--quotes-only',action='store_true',help='collect-ths 只回补指数报价和日线，成分由后续批次补齐')
     parser.add_argument('--date',help='龙虎榜交易日期 YYYY-MM-DD，默认今日')
     parser.add_argument('--directory',type=Path,help='浏览器公开 JSON 响应归档目录')
     parser.add_argument('--limit',type=int,default=0,help='回补板块数上限，0 表示全部')
-    parser.add_argument('--days',type=int,default=1,help='宽基 ETF 回补交易日数（1–60）')
     args=parser.parse_args()
     store=Store(Path(__file__).resolve().parents[1]/'runtime/market.sqlite3')
-    if args.command=='collect-etf':
-        from .etf_tracker import collect
-        from .store import TZ
-        from datetime import datetime
-        try:
-            results=collect(store,args.date or datetime.now(TZ).date().isoformat(),args.days)
-        except ValueError as exc:parser.error(str(exc))
-        for row in results:print(row)
-        return
     if args.command=='collect-lhb':
         from datetime import date, datetime
         from .lhb import collect

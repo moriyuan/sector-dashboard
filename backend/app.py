@@ -36,17 +36,11 @@ def create_app(store=None, collect=True):
     app.include_router(news_router(store))
     from .resonance import router as resonance_router
     app.include_router(resonance_router(store))
-    from .barra import router as barra_router
-    app.include_router(barra_router(store))
-    from .daily import router as daily_router
-    app.include_router(daily_router(store))
     from .lhb_api import router as lhb_router
     app.include_router(lhb_router(store))
-    from .seat_backtest import router as seat_backtest_router
-    app.include_router(seat_backtest_router())
 
-    from .etf_tracker import router as etf_router
-    app.include_router(etf_router(store))
+    from .seat_stocks import router as seat_stocks_router
+    app.include_router(seat_stocks_router(store))
 
     def date_value(value, mode='close'):
         if value:
@@ -85,12 +79,8 @@ def create_app(store=None, collect=True):
         snap = store.snapshot('market',date,mode)
         pools = store.snapshot('pools',date,mode)
         indices = store.snapshot('indices',date,mode)
-        from .index_pe import day_view as index_pe_view
-        from .financing import day_view as financing_view
         return {'meta':metadata(snap,date,mode),'stats':snap['payload']['stats'] if snap else None,'indices':indices['payload']['rows'] if indices else [],
                 'indices_meta':metadata(indices,date,mode),
-                'index_pe':index_pe_view(store,date,mode),
-                'financing':financing_view(store,date,mode,snap['collected_at'] if snap else None),
                 'emotion':pools['payload']['stats'] if pools else None,'emotion_meta':metadata(pools,date,mode)}
 
     @app.get('/api/sectors')
