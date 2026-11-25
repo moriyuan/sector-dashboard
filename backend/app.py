@@ -21,17 +21,25 @@ ROOT = Path(__file__).resolve().parents[1]
 def create_app(store=None, collect=True):
     store = store or Store(os.getenv('SECTOR_DB',str(ROOT/'runtime/market.sqlite3')))
     collector = Collector(store)
+    from short_term.api import Dashboard, router as terminal_router
 
     @asynccontextmanager
     async def lifespan(app):
+        if os.getenv('SECTOR_SHORT_TERM', '1' if collect else '0') == '1':
+            app.state.short_term = Dashboard(store.path.parent / 'short-term')
         if collect:
             collector.start()
             from .limitup import start_scheduler
             start_scheduler(store)
-        yield
-        collector.shutdown()
+        try:
+            yield
+        finally:
+            collector.shutdown()
+            if getattr(app.state, 'short_term', None) is not None:
+                app.state.short_term.close()
 
     app = FastAPI(title='板块研究台',lifespan=lifespan)
+    app.include_router(terminal_router)
     app.state.store = store
     app.state.collector = collector
     from .news_api import router as news_router
@@ -58,6 +66,9 @@ def create_app(store=None, collect=True):
 
     from .limitup import router as limitup_router
     app.include_router(limitup_router(store))
+
+    from .kaipanla_live import router as kaipanla_router
+    app.include_router(kaipanla_router(store))
 
     from . import emotion_score
 
@@ -94,7 +105,10 @@ def create_app(store=None, collect=True):
             # A dated close archive does not become stale every two quote cycles.
             e['stale'] = False
         return {'phase':current_phase,'server_time':now.isoformat(),'collecting':bool(collector.thread and collector.thread.is_alive()),'events':events,
-                'mode':'midday_and_post_close','midday_times':['12:00'],'archive_times':['15:30','16:30'],'retry_interval':300,'rule_version':RULE_VERSION,'public_sources_only':True}
+                'mode':'midday_and_post_close','midday_times':['12:00'],'archive_times':['15:30','16:30'],'retry_interval':300,'rule_version':RULE_VERSION,'public_sources_only':True,
+                'kaipanla_live': {'interval_seconds':60,
+                    'running':getattr(app.state,'short_term',None) is not None,
+                    'endpoint':'/api/short-term/live'}}
 
     @app.get('/api/market')
     def market(date: str|None=None, mode:Literal['close','midday']='close'):

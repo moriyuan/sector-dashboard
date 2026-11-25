@@ -3,7 +3,7 @@
 - base           基类：限速、重试、统一异常
 - eastmoney      东方财富涨停池（名单/连板/封板时间/炸板）
 - ths            同花顺涨停揭秘（涨停原因/板型/封单）
-- kaipanla       开盘啦（当日复盘分组+原因全文、历史梯队、题材强度）
+- kaipanla       开盘啦（日期校验的实时/历史复盘、全量强度榜、梯队、情绪、盘口、板块分时）
 - jiuyangongshe  韭研公社异动解析（题材逻辑+个股原因，需 SESSION，签名走 node 脚本）
 """
 from .base import SourceClient, SourceError

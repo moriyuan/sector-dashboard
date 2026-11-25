@@ -1,0 +1,231 @@
+<div id="kpl-today" class="kt" aria-label="开盘啦今日短线看盘预览">
+  <header class="kt-top">
+    <div class="kt-brand"><span class="kt-logo">盘</span><div><h2>短线观察台</h2><span class="kt-sub">MARKET OBSERVATORY</span></div><span class="kt-nav">盘中全景</span></div>
+    <div class="kt-top-right"><span class="kt-snapshot">今日真实快照</span><time data-asof></time><button data-notes>数据口径</button></div>
+  </header>
+  <div class="kt-context"><span data-session></span><span>开盘啦 · 供应商统计口径</span><span data-quality></span></div>
+  <section class="kt-metrics" data-metrics aria-label="市场情绪概况"></section>
+  <div class="kt-layout">
+    <aside class="kt-left">
+      <section class="kt-panel kt-board-panel">
+        <header class="kt-section-head"><h3>板块强度</h3><span data-board-total></span></header>
+        <div class="kt-board-search"><label><span class="kt-sr">查找板块</span><input data-board-search placeholder="查找板块名称" autocomplete="off"></label><button data-reset>全市场</button></div>
+        <div class="kt-table-scroll kt-board-scroll" tabindex="0" role="region" aria-label="板块强度列表，可滚动查看全部板块"><table class="kt-table"><thead><tr><th>板块</th><th>强度</th><th>涨跌幅</th><th>涨停</th></tr></thead><tbody data-boards></tbody></table></div>
+        <div class="kt-panel-note">涨停数按主归属统计 · 点击板块联动筛选</div>
+      </section>
+      <section class="kt-panel kt-core-panel">
+        <header class="kt-section-head"><h3>日内核心前排</h3><span>高度 / 时间优先</span></header>
+        <div class="kt-table-scroll"><table class="kt-table"><thead><tr><th>个股</th><th>身位</th><th>涨幅</th><th>成交额</th></tr></thead><tbody data-core></tbody></table></div>
+        <div class="kt-panel-note" data-core-note></div>
+      </section>
+      <section class="kt-panel kt-loss-panel">
+        <header class="kt-section-head"><h3>亏钱效应 · 大幅回撤</h3><span data-loss-count></span></header>
+        <div class="kt-table-scroll" tabindex="0" role="region" aria-label="亏钱效应列表，可滚动查看全部个股"><table class="kt-table"><thead><tr><th>个股</th><th>回撤</th><th>涨跌幅</th></tr></thead><tbody data-loss></tbody></table></div>
+      </section>
+    </aside>
+    <main class="kt-main">
+      <section class="kt-reading">
+        <div class="kt-reading-top"><span class="kt-eyebrow">当前盘面</span><span data-scope></span></div>
+        <h3 data-headline></h3><p data-reading></p>
+        <div class="kt-carriers" data-carriers></div>
+      </section>
+      <section class="kt-panel kt-trend-panel">
+        <header class="kt-section-head"><h3>板块日内走势</h3><span>相对昨收 · %</span></header>
+        <div class="kt-trend-tabs" data-trend-tabs></div><div class="kt-chart" data-chart></div>
+      </section>
+      <section class="kt-panel kt-ladder-panel">
+        <header class="kt-section-head"><div><h3>涨停全梯队</h3><span class="kt-local-caption" data-ladder-caption></span></div><span class="kt-order">涨停时间升序 ↑</span></header>
+        <div class="kt-ladder" data-ladder tabindex="0" role="region" aria-label="涨停全梯队，可滚动查看全部个股"></div>
+        <div class="kt-panel-note">按今日供应商涨停时间排序；点击个股查看盘口与涨停原因。</div>
+      </section>
+      <section class="kt-panel kt-detail" aria-live="polite">
+        <header class="kt-section-head"><h3>个股追踪</h3><span data-detail-theme></span></header>
+        <div data-detail></div>
+      </section>
+    </main>
+    <aside class="kt-right">
+      <section class="kt-panel kt-tape-panel">
+        <header class="kt-section-head"><h3>今日涨停时间流</h3><span data-tape-count></span></header>
+        <div class="kt-tape-controls"><span>按时间查看先后顺序</span><button data-order aria-pressed="false">切换为最新在前</button></div>
+        <div class="kt-tape" data-tape></div>
+        <div class="kt-tape-end">当前涨停名单的时间排序<br>不包含全部瞬时炸板与回封事件</div>
+      </section>
+    </aside>
+  </div>
+  <details class="kt-notes"><summary>数据与展示口径</summary><p data-source-note></p><p>市场涨跌家数来自无独立交易日期的市场概况接口，按本次观测展示。情绪、梯队、板块均核验来源日期；梯队同时核验总数。当前页面为单次真实快照，不自动更新。个股角色是按连板高度与时间选出的观察候选，未判定“龙头”，时间先后也不代表因果关系。</p></details>
+  <footer class="kt-footer"><span data-footer></span><span>真实行情 · 本地预览 · 未提交代码</span></footer>
+</div>
+<style>
+#kpl-today{--kt-bg:#101416;--kt-panel:#191e21;--kt-raised:#21282c;--kt-line:#30383e;--kt-text:#e7ecef;--kt-muted:#9ba9b2;--kt-red:#ff6b7b;--kt-green:#51cbb0;--kt-gold:#edc17b;--kt-blue:#9bbbed;--kt-accent:#8cd9c8;--kt-row:42px;color:var(--kt-text);background:var(--kt-bg);font:14px/1.5 'Segoe UI','Microsoft YaHei',sans-serif;font-variant-numeric:tabular-nums;border:1px solid var(--kt-line);border-radius:10px;overflow:hidden;color-scheme:dark}
+#kpl-today *{box-sizing:border-box}#kpl-today h2,#kpl-today h3,#kpl-today h4,#kpl-today p{margin:0;color:inherit}#kpl-today button,#kpl-today input{font:inherit}#kpl-today button{color:inherit;background:none;border:0;cursor:pointer}#kpl-today button:focus-visible,#kpl-today input:focus-visible{outline:2px solid var(--kt-accent);outline-offset:2px}#kpl-today button:disabled{opacity:.45;cursor:default}#kpl-today .kt-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}#kpl-today .kt-up{color:var(--kt-red)}#kpl-today .kt-down{color:var(--kt-green)}#kpl-today .kt-muted{color:var(--kt-muted)}#kpl-today .kt-gold{color:var(--kt-gold)}#kpl-today .kt-top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:17px 20px;border-bottom:1px solid var(--kt-line)}#kpl-today .kt-brand,#kpl-today .kt-top-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}#kpl-today .kt-logo{width:37px;height:37px;display:grid;place-items:center;background:#243c39;color:var(--kt-accent);border:1px solid #3e645b;border-radius:8px;font-size:21px;font-weight:650}#kpl-today h2{font-size:20px;letter-spacing:.06em;font-weight:650}#kpl-today .kt-sub{font-size:10px;color:var(--kt-muted);letter-spacing:.12em}#kpl-today .kt-nav{margin-left:12px;padding:7px 0;border-bottom:2px solid var(--kt-accent);font-weight:600}#kpl-today .kt-top-right{gap:11px;font-size:12px}#kpl-today .kt-top-right time{color:#c1ccd2}#kpl-today .kt-top-right button{padding:6px 10px;border:1px solid var(--kt-line);border-radius:5px}#kpl-today .kt-snapshot{color:var(--kt-accent);background:#1c302c;padding:4px 8px;border-radius:4px}#kpl-today .kt-context{padding:10px 16px 8px;display:flex;gap:14px;color:var(--kt-muted);font-size:12px;flex-wrap:wrap}#kpl-today .kt-context>span:first-child{color:var(--kt-gold)}#kpl-today .kt-context>span:last-child{margin-left:auto}#kpl-today .kt-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));margin:0 12px 10px;border:1px solid var(--kt-line);border-radius:7px;background:var(--kt-panel)}#kpl-today .kt-metric{padding:12px 15px;min-width:0;border-right:1px solid var(--kt-line)}#kpl-today .kt-metric:last-child{border:0}#kpl-today .kt-metric-label{font-size:12px;color:#bec8ce;display:block}#kpl-today .kt-metric-values{display:flex;gap:8px;align-items:baseline;margin:4px 0 3px;white-space:nowrap}#kpl-today .kt-big{font:650 26px/1.2 'Segoe UI',sans-serif;letter-spacing:-.04em}#kpl-today .kt-divider{color:#74838e;font-size:16px}#kpl-today .kt-metric-note{display:block;font-size:11px;color:var(--kt-muted)}#kpl-today .kt-temp-track{height:3px;display:flex;margin-top:8px;background:#323b41;border-radius:3px}#kpl-today .kt-temp-track span{display:block;background:var(--kt-green);border-radius:3px}#kpl-today .kt-layout{display:grid;grid-template-columns:minmax(240px,.95fr) minmax(470px,1.9fr) minmax(210px,.8fr);gap:10px;padding:0 12px 12px;align-items:start}#kpl-today .kt-left,#kpl-today .kt-main,#kpl-today .kt-right{min-width:0;display:grid;gap:10px}#kpl-today .kt-panel{background:var(--kt-panel);border:1px solid var(--kt-line);border-radius:7px;min-width:0;overflow:hidden}#kpl-today .kt-section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 13px 10px}#kpl-today h3{font-size:15px;font-weight:650}#kpl-today .kt-section-head>span,#kpl-today .kt-local-caption{font-size:11px;color:var(--kt-muted)}#kpl-today .kt-local-caption{display:block;margin-top:3px}#kpl-today .kt-board-search{display:flex;gap:8px;padding:0 12px 10px}#kpl-today .kt-board-search label{min-width:0;flex:1}#kpl-today input{width:100%;background:#111619;border:1px solid var(--kt-line);border-radius:4px;padding:6px 8px;color:var(--kt-text);font-size:12px}#kpl-today .kt-board-search button{font-size:12px;background:#253b37;color:var(--kt-accent);border-radius:4px;padding:4px 8px;white-space:nowrap}#kpl-today .kt-table{width:100%;border-collapse:collapse;table-layout:auto;font-size:12px}#kpl-today .kt-table th{font-weight:400;color:var(--kt-muted);font-size:11px;background:#171c20;padding:7px 8px;position:sticky;top:0;z-index:1;white-space:nowrap}#kpl-today .kt-table td{border-bottom:1px solid #2a3238;padding:7px 8px;height:var(--kt-row);text-align:right;white-space:nowrap}#kpl-today .kt-table th{text-align:right}#kpl-today .kt-table th:first-child,#kpl-today .kt-table td:first-child{text-align:left;padding-left:12px}#kpl-today .kt-table td:last-child,#kpl-today .kt-table th:last-child{padding-right:12px}#kpl-today .kt-table tr:last-child td{border-bottom:0}#kpl-today .kt-table tr:hover{background:#242e32}#kpl-today .kt-table tr.is-active{background:#243633}#kpl-today .kt-table button{padding:0;text-align:left;white-space:nowrap;display:block;max-width:100%}#kpl-today .kt-table button span{display:block;font-size:10px;color:var(--kt-muted)}#kpl-today .kt-rank{display:inline-block!important;width:20px;font-size:10px!important;color:var(--kt-muted)!important}#kpl-today .kt-table-scroll{overflow:auto}#kpl-today .kt-board-scroll{max-height:409px;scrollbar-color:#435058 #171c20;scrollbar-width:thin}#kpl-today .kt-panel-note{padding:8px 12px;border-top:1px solid var(--kt-line);color:var(--kt-muted);font-size:10px}#kpl-today .kt-reading{padding:15px 16px;border:1px solid #3c4b47;background:linear-gradient(110deg,#1d2b27,#1b2225);border-radius:7px}#kpl-today .kt-reading-top{display:flex;justify-content:space-between;font-size:11px;color:var(--kt-muted);gap:8px}#kpl-today .kt-eyebrow{color:var(--kt-accent);letter-spacing:.12em}#kpl-today .kt-reading h3{font-size:19px;font-weight:600;margin:6px 0 5px}#kpl-today .kt-reading p{font-size:12px;color:#b7c3c9;line-height:1.75}#kpl-today .kt-carriers{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}#kpl-today .kt-carriers button{display:flex;align-items:center;gap:8px;padding:5px 9px;background:#293432;border:1px solid #3a4945;border-radius:4px;font-size:11px}#kpl-today .kt-carriers b{color:var(--kt-gold);font-weight:600}#kpl-today .kt-trend-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 12px 2px}#kpl-today .kt-trend-tabs button{padding:4px 9px;border:1px solid var(--kt-line);border-radius:4px;font-size:11px;color:var(--kt-muted)}#kpl-today .kt-trend-tabs button.is-active{background:#2b3935;color:var(--kt-accent);border-color:#52665e}#kpl-today .kt-chart{height:153px;margin:0 6px 4px}#kpl-today .kt-chart svg{width:100%;height:100%;display:block}#kpl-today .kt-ladder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--kt-line);min-height:420px;max-height:610px;overflow:auto;scrollbar-width:thin;scrollbar-color:#435058 #171c20}#kpl-today .kt-tier{min-width:0;border-right:1px solid var(--kt-line);padding:0 9px 8px}#kpl-today .kt-tier:last-child{border:0}#kpl-today .kt-tier-head{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:10px 0;background:var(--kt-panel);position:sticky;top:0;z-index:1;border-bottom:1px solid var(--kt-line)}#kpl-today .kt-tier-head h4{font-size:13px;white-space:nowrap;font-weight:600}#kpl-today .kt-tier-head b{font-size:20px;font-weight:600;color:var(--kt-gold)}#kpl-today .kt-stock{width:100%;text-align:left;padding:10px 0;border-bottom:1px solid var(--kt-line);display:block}#kpl-today .kt-stock.is-active{background:#273b36;box-shadow:inset 2px 0 var(--kt-accent);padding-left:6px;padding-right:3px}#kpl-today .kt-stock:hover{background:#242f32}#kpl-today .kt-stock strong{font-size:13px;font-weight:600;display:block;white-space:nowrap}#kpl-today .kt-stock .kt-stock-theme{font-size:10px;color:var(--kt-muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0 7px}#kpl-today .kt-stock-meta{display:flex;justify-content:space-between;gap:4px;font-size:10px;color:#b2c2cb;flex-wrap:wrap}#kpl-today .kt-empty{color:var(--kt-muted);font-size:11px;text-align:center;padding:24px 2px;line-height:1.8}#kpl-today .kt-chip{display:inline-block;padding:0 3px;font-size:9px;color:var(--kt-gold);border:1px solid #66553e;border-radius:3px;vertical-align:2px;margin-left:4px;font-weight:400}#kpl-today .kt-tape-controls{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:10px;padding:0 12px 10px;color:var(--kt-muted)}#kpl-today .kt-tape-controls button{font-size:10px;color:var(--kt-blue)}#kpl-today .kt-tape{padding:0 12px}#kpl-today .kt-tape-item{width:100%;display:grid;grid-template-columns:52px minmax(0,1fr) 27px;gap:7px;text-align:left;padding:12px 0;border-top:1px solid var(--kt-line);align-items:center}#kpl-today .kt-tape-item time{font:12px 'Consolas',monospace;color:var(--kt-blue)}#kpl-today .kt-tape-item strong{display:block;font-size:13px;font-weight:600;white-space:nowrap}#kpl-today .kt-tape-item small{font-size:10px;color:var(--kt-muted);white-space:nowrap;display:block;overflow:hidden;text-overflow:ellipsis}#kpl-today .kt-tape-item em{font-size:11px;color:var(--kt-gold);font-style:normal;text-align:right}#kpl-today .kt-tape-item.is-active{background:#273b36}#kpl-today .kt-tape-item:hover{background:#242f32}#kpl-today .kt-tape-end{text-align:center;font-size:10px;color:var(--kt-muted);padding:18px 10px;border-top:1px solid var(--kt-line)}#kpl-today .kt-detail-body{padding:0 13px 12px}#kpl-today .kt-detail-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:10px}#kpl-today .kt-detail-name{font-size:19px;font-weight:650}#kpl-today .kt-detail-code{font-size:11px;color:var(--kt-muted);margin-left:6px}#kpl-today .kt-detail-price{margin-left:auto;font-size:20px;font-weight:600}#kpl-today .kt-detail-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px 0;border-top:1px solid var(--kt-line);border-bottom:1px solid var(--kt-line)}#kpl-today .kt-detail-stats span{display:block;font-size:10px;color:var(--kt-muted)}#kpl-today .kt-detail-stats b{display:block;font-size:12px;font-weight:500;margin-top:3px}#kpl-today .kt-reason{padding:10px 0 0;font-size:12px;color:#c4ced3;line-height:1.8;white-space:pre-line;overflow-wrap:anywhere;max-height:170px;overflow:auto;scrollbar-width:thin}#kpl-today .kt-detail-source{font-size:10px;color:var(--kt-muted);margin-top:8px}#kpl-today .kt-notes{padding:10px 16px;border-top:1px solid var(--kt-line);font-size:11px;color:var(--kt-muted)}#kpl-today .kt-notes summary{cursor:pointer;color:#bbc7cc}#kpl-today .kt-notes p{margin-top:8px;line-height:1.7}#kpl-today .kt-footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 16px;background:#0d1113;color:var(--kt-muted);font-size:10px}
+@media(min-width:1500px){#kpl-today{font-size:15px}#kpl-today .kt-layout{grid-template-columns:minmax(310px,1fr) minmax(620px,2fr) minmax(280px,.9fr)}#kpl-today .kt-table{font-size:14px}#kpl-today .kt-stock strong,#kpl-today .kt-tape-item strong{font-size:14px}#kpl-today .kt-chart{height:175px}}
+@media(max-width:1100px){#kpl-today .kt-layout{grid-template-columns:minmax(210px,.85fr) minmax(390px,1.65fr) minmax(185px,.75fr);gap:8px;padding:0 8px 8px}#kpl-today .kt-section-head{padding:10px}#kpl-today .kt-metric{padding:10px}#kpl-today .kt-big{font-size:22px}#kpl-today .kt-table td,#kpl-today .kt-table th{padding-left:5px;padding-right:5px}#kpl-today .kt-tier{padding:0 6px 7px}#kpl-today .kt-stock strong{font-size:12px}#kpl-today .kt-tape{padding:0 9px}#kpl-today .kt-tape-item{gap:5px;grid-template-columns:47px minmax(0,1fr) 22px}#kpl-today .kt-tape-item time{font-size:11px}#kpl-today .kt-tape-item strong{font-size:12px}#kpl-today .kt-order{font-size:10px}}
+@media(max-width:880px){#kpl-today .kt-layout{grid-template-columns:minmax(220px,.8fr) minmax(390px,1.5fr)}#kpl-today .kt-right{grid-column:1/-1}#kpl-today .kt-tape{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 18px}#kpl-today .kt-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}#kpl-today .kt-metric:nth-child(3){border-right:0}#kpl-today .kt-metric:nth-child(-n+3){border-bottom:1px solid var(--kt-line)}#kpl-today .kt-nav{display:none}}
+@media(max-width:650px){#kpl-today .kt-top{align-items:flex-start;flex-direction:column;padding:14px}#kpl-today .kt-top-right{width:100%}#kpl-today .kt-context{gap:7px}#kpl-today .kt-context>span:last-child{margin-left:0}#kpl-today .kt-layout{display:flex;flex-direction:column}#kpl-today .kt-left,#kpl-today .kt-main,#kpl-today .kt-right{width:100%}#kpl-today .kt-main{order:0}#kpl-today .kt-left{order:1}#kpl-today .kt-right{order:2}#kpl-today .kt-ladder{grid-template-columns:repeat(2,minmax(0,1fr));max-height:none;min-height:0}#kpl-today .kt-tier:nth-child(2){border-right:0}#kpl-today .kt-tier-head{position:static}#kpl-today .kt-tier{border-bottom:1px solid var(--kt-line)}#kpl-today .kt-tape{grid-template-columns:repeat(2,minmax(0,1fr))}#kpl-today .kt-metrics{margin-left:8px;margin-right:8px}#kpl-today .kt-big{font-size:20px}#kpl-today .kt-metric{padding:9px 7px}#kpl-today .kt-metric-note{font-size:10px}#kpl-today .kt-reading h3{font-size:17px}#kpl-today .kt-detail-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:380px){#kpl-today .kt-tape{grid-template-columns:1fr}#kpl-today .kt-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#kpl-today .kt-metric{border-bottom:1px solid var(--kt-line)}#kpl-today .kt-metric:nth-child(3){border-right:1px solid var(--kt-line)}#kpl-today .kt-metric:nth-child(even){border-right:0}}
+/* Keep this dark product surface independent of the conversation's light-theme text resets. */
+#kpl-today { --kt-ink:#e7ecef; }
+#kpl-today, #kpl-today :where(:not(svg, svg *)) {
+  color:var(--kt-ink,#e7ecef)!important;
+  -webkit-text-fill-color:var(--kt-ink,#e7ecef)!important;
+}
+#kpl-today :is(.kt-sub,.kt-context,.kt-metric-note,.kt-divider,.kt-muted,.kt-local-caption,
+  .kt-rank,.kt-panel-note,.kt-reading-top,.kt-stock-theme,.kt-empty,.kt-tape-controls,
+  .kt-tape-end,.kt-detail-code,.kt-detail-source,.kt-notes,.kt-footer),
+#kpl-today .kt-section-head>span,
+#kpl-today .kt-table th,
+#kpl-today .kt-table button span,
+#kpl-today .kt-tape-item small,
+#kpl-today .kt-detail-stats span { --kt-ink:#acbac3; }
+#kpl-today :is(h2,h3,h4,.kt-nav,.kt-detail-name),
+#kpl-today .kt-table td,
+#kpl-today .kt-table button,
+#kpl-today .kt-stock strong,
+#kpl-today .kt-tape-item strong,
+#kpl-today .kt-detail-stats b { --kt-ink:#e7ecef; }
+#kpl-today .kt-metric-label { --kt-ink:#c6d1d8; }
+#kpl-today .kt-reading p,#kpl-today .kt-reason { --kt-ink:#c6d1d8; }
+#kpl-today :is(.kt-logo,.kt-snapshot,.kt-eyebrow),
+#kpl-today .kt-board-search button,
+#kpl-today .kt-trend-tabs button.is-active { --kt-ink:#8cd9c8; }
+#kpl-today .kt-trend-tabs button { --kt-ink:#acbac3; }
+#kpl-today .kt-tape-item time,#kpl-today [data-order] { --kt-ink:#a8c7f5; }
+#kpl-today .kt-stock-meta { --kt-ink:#bdcbd3; }
+#kpl-today :is(.kt-gold,.kt-chip),
+#kpl-today .kt-carriers b,
+#kpl-today .kt-tier-head b,
+#kpl-today .kt-tape-item em,
+#kpl-today .kt-context>span:first-child { --kt-ink:#edc17b; }
+#kpl-today .kt-table .kt-gold { --kt-ink:#edc17b; }
+#kpl-today .kt-up,#kpl-today .kt-table .kt-up { --kt-ink:#ff7b89; }
+#kpl-today .kt-down,#kpl-today .kt-table .kt-down { --kt-ink:#63d7bd; }
+</style>
+<script type="application/json" id="kpl-today-data">__TODAY_DATA__</script>
+<script>
+(()=>{
+const root=document.getElementById('kpl-today');
+const D=JSON.parse(document.getElementById('kpl-today-data').textContent);
+const $=s=>root.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=v=>v==null?'—':Number(v).toLocaleString('zh-CN');
+const pct=v=>v==null?'—':`${v>0?'+':''}${Number(v).toFixed(2)}%`;
+const money=v=>v==null?'—':v>=1e8?(v/1e8).toFixed(2)+'亿':(v/1e4).toFixed(0)+'万';
+const color=v=>v>0?'kt-up':v<0?'kt-down':'';
+const sorted=D.stocks.slice().sort((a,b)=>a.limit_timestamp-b.limit_timestamp||a.code.localeCompare(b.code));
+const counts={};D.stocks.forEach(r=>counts[r.theme]=(counts[r.theme]||0)+1);
+const carriers=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+const state={theme:'全市场',stock:D.stocks.slice().sort((a,b)=>b.boards-a.boards||a.limit_timestamp-b.limit_timestamp)[0]?.code,search:'',descending:false,trend:Object.keys(D.trends)[0]};
+const saved=globalThis.openai?.widgetState?.modelContent;
+if(saved&&D.stocks.some(s=>s.code===saved.stock))state.stock=saved.stock;
+if(saved?.theme==='全市场'||D.boards.some(b=>b.name===saved?.theme))state.theme=saved.theme;
+const filtered=()=>sorted.filter(s=>state.theme==='全市场'||s.theme===state.theme);
+function remember(){globalThis.openai?.setWidgetState?.({modelContent:{date:D.date,time:D.capturedAt.slice(11,19),theme:state.theme,stock:state.stock},privateContent:null})?.catch(()=>{});}
+function metrics(){
+ if(D.noData){$('[data-metrics]').innerHTML=['上涨 / 下跌','涨停 / 跌停','炸板率','情绪温度','连板高度','大幅回撤'].map(label=>`<div class="kt-metric"><span class="kt-metric-label">${label}</span><div class="kt-metric-values">—</div><span class="kt-metric-note">30日窗口内无有效数据，待获取</span></div>`).join('');return;}
+ const m=D.market,r=D.riseFall,e=D.emotion;
+ const breadth=m.SZJS/(m.SZJS+m.XDJS)*100;
+ const all=[
+  ['上涨 / 下跌',`<b class="kt-big kt-up">${nf(m.SZJS)}</b><span class="kt-divider">/</span><b class="kt-big kt-down">${nf(m.XDJS)}</b>`,`上涨占比 ${breadth.toFixed(1)}%`],
+  ['涨停 / 跌停',`<b class="kt-big kt-up">${r.limit_up}</b><span class="kt-divider">/</span><b class="kt-big kt-down">${r.limit_down}</b>`,`当前炸板 ${r.failed_limit} 只`],
+  ['炸板率',`<b class="kt-big kt-gold">${r.break_rate.toFixed(2)}%</b>`,`封板率 ${(100-r.break_rate).toFixed(2)}%`],
+  ['情绪温度',`<b class="kt-big kt-down">${e.temperature}</b><span class="kt-divider">/100</span>`,`开盘啦情绪指标`],
+  ['连板高度',`<b class="kt-big">${e.highest}</b><span class="kt-divider">板</span>`,`连板股 ${D.stocks.filter(s=>s.boards>=2).length} 只`],
+  ['大幅回撤',`<b class="kt-big kt-down">${D.drawdowns.length}</b><span class="kt-divider">只</span>`,`涨跌家数为本次观测值`]
+ ];
+ $('[data-metrics]').innerHTML=all.map(([label,value,note])=>`<div class="kt-metric"><span class="kt-metric-label">${label}</span><div class="kt-metric-values">${value}</div><span class="kt-metric-note">${note}</span></div>`).join('');
+}
+function renderBoards(){
+ const boards=D.boards.filter(b=>b.name.toLowerCase().includes(state.search.toLowerCase()));
+ $('[data-board-total]').textContent=`${boards.length} / ${D.boards.length} 个板块`;
+ $('[data-boards]').innerHTML=boards.map(b=>`<tr class="${state.theme===b.name?'is-active':''}"><td><button data-theme="${esc(b.name)}"><span class="kt-rank">${String(b.rank).padStart(2,'0')}</span>${esc(b.name)}</button></td><td class="kt-gold">${nf(b.strength)}</td><td class="${color(b.change)}">${pct(b.change)}</td><td>${counts[b.name]||'—'}</td></tr>`).join('')||'<tr><td colspan="4">没有匹配的板块</td></tr>';
+}
+function renderReading(){
+ const first=carriers[0],second=carriers[1];
+ $('[data-scope]').textContent=state.theme==='全市场'?'全市场观察':`筛选中 · ${state.theme}`;
+ $('[data-headline]').textContent=`涨停集中在${first?.[0]||'少数板块'}，${D.market.XDJS>D.market.SZJS?'下跌家数占优':'上涨家数占优'}`;
+ $('[data-reading]').textContent=`${first?.[0]||''} ${first?.[1]||0} 只、${second?.[0]||''} ${second?.[1]||0} 只涨停；最高 ${D.emotion.highest} 板。当前炸板率 ${D.riseFall.break_rate.toFixed(1)}%，观察强势个股的同时需关注分化。`;
+ $('[data-carriers]').innerHTML=carriers.slice(0,4).map(([name,n])=>`<button data-theme="${esc(name)}">${esc(name)}<b>${n} 只</b></button>`).join('');
+}
+function renderTrend(){
+ $('[data-trend-tabs]').innerHTML=Object.entries(D.trends).map(([code,t])=>`<button data-trend="${code}" class="${state.trend===code?'is-active':''}">${esc(D.boards.find(b=>b.code===code)?.name||code)}</button>`).join('');
+ const t=D.trends[state.trend];
+ if(!t){$('[data-chart]').innerHTML='<div class="kt-empty">该板块的分时未在本次预览中采集</div>';return;}
+ const values=t.trend.filter(r=>r[1]>0).map(r=>({time:r[0],v:(r[1]/t.preclose_px-1)*100}));
+ const width=Math.max(280,$('[data-chart]').clientWidth||500),height=153,L=42,R=51,T=15,B=27;
+ const minimum=Math.min(0,...values.map(r=>r.v)),maximum=Math.max(0,...values.map(r=>r.v));
+ const pad=Math.max((maximum-minimum)*.18,.18),lo=minimum-pad,hi=maximum+pad;
+ const minute=time=>{let[h,m]=time.split(':').map(Number);let n=h*60+m;return n<=690?n-570:120+n-780;};
+ const x=time=>L+(minute(time)/240)*(width-L-R),y=v=>T+(hi-v)/(hi-lo)*(height-T-B);
+ const last=values[values.length-1],stroke=last.v>=0?'#ff6b7b':'#51cbb0';
+ const path=values.map((r,i)=>`${i?'L':'M'}${x(r.time).toFixed(1)} ${y(r.v).toFixed(1)}`).join(' ');
+ const ticks=[lo,0,hi].filter((v,i,a)=>a.findIndex(n=>Math.abs(n-v)<.05)===i);
+ const label=D.boards.find(b=>b.code===state.trend)?.name||state.trend;
+ $('[data-chart]').innerHTML=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(label)}今日分时，最新涨跌幅 ${pct(last.v)}"><title>${esc(label)}真实分钟数据</title>${ticks.map(v=>`<line x1="${L}" x2="${width-R}" y1="${y(v)}" y2="${y(v)}" stroke="${v===0?'#607179':'#30383e'}" stroke-width="1"/><text x="${L-7}" y="${y(v)+4}" text-anchor="end" fill="#9ba9b2" font-size="10">${v.toFixed(1)}%</text>`).join('')}<path d="${path}" fill="none" stroke="${stroke}" stroke-width="1.8" stroke-linejoin="round"/><circle cx="${x(last.time)}" cy="${y(last.v)}" r="3" fill="${stroke}"/><text x="${width-R+7}" y="${y(last.v)+4}" fill="${stroke}" font-size="11">${pct(last.v)}</text>${[['09:30',0],['11:30 / 13:00',120],['15:00',240]].map(([label,v])=>`<text x="${L+v/240*(width-L-R)}" y="${height-6}" text-anchor="${v===0?'start':v===240?'end':'middle'}" fill="#9ba9b2" font-size="10">${label}</text>`).join('')}${values.map(r=>`<circle cx="${x(r.time)}" cy="${y(r.v)}" r="4" fill="transparent"><title>${r.time} · ${pct(r.v)}</title></circle>`).join('')}</svg>`;
+}
+function renderCore(){
+ const rows=filtered().slice().sort((a,b)=>b.boards-a.boards||a.limit_timestamp-b.limit_timestamp).slice(0,8);
+ $('[data-core]').innerHTML=rows.map(s=>`<tr class="${s.code===state.stock?'is-active':''}"><td><button data-stock="${s.code}">${esc(s.name)}<span>${s.code}</span></button></td><td>${s.boards}板</td><td class="${color(s.quote?.change)}">${pct(s.quote?.change)}</td><td>${money(s.quote?.amount)}</td></tr>`).join('')||'<tr><td colspan="4">本板块没有当前涨停股</td></tr>';
+ $('[data-core-note]').textContent=`${state.theme} · 展示 ${rows.length} 只前排观察候选`;
+}
+function renderLadder(){
+ const stocks=filtered();
+ $('[data-ladder-caption]').textContent=`${state.theme} · ${stocks.length} 只${D.ladderComplete?' · 全市场总数核验通过':' · 名单尚未完整核验'}`;
+ const tiers=[1,2,3,4];
+ $('[data-ladder]').style.gridTemplateColumns=`repeat(${Math.min(4,tiers.length)},minmax(0,1fr))`;
+ if(root.clientWidth<=650)$('[data-ladder]').style.gridTemplateColumns='repeat(2,minmax(0,1fr))';
+ $('[data-ladder]').innerHTML=tiers.map(level=>{
+  const rows=stocks.filter(s=>level===4?s.boards>=4:s.boards===level).sort((a,b)=>a.limit_timestamp-b.limit_timestamp||a.code.localeCompare(b.code));
+  return `<section class="kt-tier"><div class="kt-tier-head"><h4>${level===1?'首板':level===4?'4板及以上':level+'板'}</h4><b>${rows.length}</b></div>${rows.map(s=>`<button class="kt-stock ${s.code===state.stock?'is-active':''}" data-stock="${s.code}"><strong>${esc(s.name)}${level===4?`<span class="kt-chip">${s.boards}板</span>`:''}${/^(30|68)/.test(s.code)?'<span class="kt-chip">20cm</span>':''}</strong><span class="kt-stock-theme">${esc(s.theme)}</span><span class="kt-stock-meta"><time>${s.limit_time}</time><span class="${color(s.quote?.change)}">${pct(s.quote?.change)}</span></span></button>`).join('')||'<div class="kt-empty">暂无成员</div>'}</section>`;
+ }).join('');
+}
+function renderTape(){
+ const rows=filtered().slice();if(state.descending)rows.reverse();
+ $('[data-tape-count]').textContent=`${rows.length} 只`;
+ $('[data-order]').textContent=state.descending?'切换为时间升序':'切换为最新在前';$('[data-order]').setAttribute('aria-pressed',String(state.descending));
+ $('[data-tape]').innerHTML=rows.map(s=>`<button class="kt-tape-item ${state.stock===s.code?'is-active':''}" data-stock="${s.code}"><time>${s.limit_time.slice(0,5)}</time><span><strong>${esc(s.name)}</strong><small>${esc(s.theme)} · ${s.code}</small></span><em>${s.boards}板</em></button>`).join('')||'<p class="kt-empty">本板块暂无当前涨停股</p>';
+}
+function renderDetail(){
+ const s=D.stocks.find(r=>r.code===state.stock);if(!s)return;
+ const q=s.quote;
+ $('[data-detail-theme]').textContent=s.theme;
+ $('[data-detail]').innerHTML=`<div class="kt-detail-body"><div class="kt-detail-top"><div><span class="kt-detail-name">${esc(s.name)}</span><span class="kt-detail-code">${s.code} · ${s.boards}板</span></div><span class="kt-detail-price ${color(q?.change)}">${q?.price?.toFixed(2)||'—'}</span><span class="${color(q?.change)}">${pct(q?.change)}</span></div><div class="kt-detail-stats"><div><span>涨停时间</span><b>${s.limit_time}</b></div><div><span>成交额</span><b>${money(q?.amount)}</b></div><div><span>换手率</span><b>${q?.turnover==null?'—':q.turnover.toFixed(2)+'%'}</b></div><div><span>最高 / 最低</span><b>${q?.high?.toFixed(2)||'—'} / ${q?.low?.toFixed(2)||'—'}</b></div></div><p class="kt-reason">${esc((q?.reason||'接口未提供涨停原因').replace(/\\r\\n/g,'\n'))}</p><div class="kt-detail-source">盘口来源时间 ${q?.source_time?.slice(11,19)||'未取得'} · 涨停原因来自供应商</div></div>`;
+}
+function renderLoss(){
+ $('[data-loss-count]').textContent=`${D.drawdowns.length} 只`;
+ $('[data-loss]').innerHTML=D.drawdowns.slice().sort((a,b)=>a.drawdown-b.drawdown).map(s=>`<tr><td>${esc(s.name)}</td><td class="kt-down">${pct(s.drawdown)}</td><td class="${color(s.change)}">${pct(s.change)}</td></tr>`).join('');
+}
+function render(){
+ renderBoards();renderReading();renderCore();renderLadder();renderTape();renderDetail();renderTrend();
+ if(D.noData){
+  $('[data-session]').textContent='行情待获取 · 北京时间';
+  $('[data-quality]').textContent='30日窗口内无有效行情快照';
+  $('[data-footer]').textContent='行情待获取 · 未加载过期历史';
+  $('[data-board-total]').textContent='板块数据待获取';
+  $('[data-loss-count]').textContent='—';
+  $('[data-core-scope]').textContent='日内数据待获取';
+  $('[data-core-note]').textContent='日内前排与10日榜待获取，近期核心名单独立保留。';
+  $('[data-tape-count]').textContent='—';
+  $('[data-ladder-caption]').textContent='涨停名单待获取';
+  root.querySelectorAll('.kt-tier-head b').forEach(el=>el.textContent='—');
+ }
+}
+root.addEventListener('click',event=>{
+ const button=event.target.closest('button');if(!button||!root.contains(button))return;
+ if(button.hasAttribute('data-theme')){state.theme=button.dataset.theme;const b=D.boards.find(b=>b.name===state.theme);if(b&&D.trends[b.code])state.trend=b.code;const first=filtered()[0];if(first)state.stock=first.code;render();remember();}
+ if(button.hasAttribute('data-reset')){state.theme='全市场';state.search='';$('[data-board-search]').value='';render();remember();}
+ if(button.hasAttribute('data-stock')){state.stock=button.dataset.stock;renderCore();renderLadder();renderTape();renderDetail();remember();}
+ if(button.hasAttribute('data-trend')){state.trend=button.dataset.trend;renderTrend();}
+ if(button.hasAttribute('data-order')){state.descending=!state.descending;renderTape();}
+ if(button.hasAttribute('data-notes')){const notes=$('.kt-notes');notes.open=!notes.open;if(notes.open)notes.scrollIntoView({behavior:'smooth',block:'nearest'});}
+});
+$('[data-board-search]').addEventListener('input',event=>{state.search=event.target.value;renderBoards();});
+$('[data-asof]').textContent=`${D.date} ${D.capturedAt.slice(11,19)}`;
+$('[data-session]').textContent=`${D.capturedAt.slice(11,16)>='15:00'?'已收盘':'交易中'} · 北京时间`;
+$('[data-quality]').textContent=`${D.ladderComplete?'涨停名单完整核验':'涨停名单待核验'} · ${D.boards.length} 个板块`;
+$('[data-footer]').textContent=`${D.source} · 采集于 ${D.capturedAt.slice(11,19)} · 本次预览不自动刷新`;
+$('[data-source-note]').textContent=`${D.date} 真实数据，共 ${D.boards.length} 个板块、${D.stocks.length} 只当前涨停股。涨停时间为供应商字段，首次/最近封板语义未核定。板块分时为实际分钟序列，个股分时尚未接入。所有价格和涨幅均来自真实盘口，缺失值显示为“—”。`;
+metrics();renderLoss();render();
+if(globalThis.ResizeObserver){new ResizeObserver(()=>{renderTrend();const small=root.clientWidth<=650;$('[data-ladder]').style.gridTemplateColumns=small?'repeat(2,minmax(0,1fr))':'repeat(4,minmax(0,1fr))';}).observe(root);}
+if(globalThis.Tweak){const style={rowHeight:42};const tweak=new Tweak({container:root,onChange:()=>root.style.setProperty('--kt-row',style.rowHeight+'px')});tweak.addSlider(style,'rowHeight',{label:'表格行高',min:34,max:50,step:2,unit:'px'});}
+})();
+</script>

@@ -1,0 +1,27 @@
+#kpl-today .kt-track-panel {border-color:#415952;background:linear-gradient(135deg,#1e2b29,#171e23 72%)}
+#kpl-today .kt-track-panel .kt-section-head {padding-bottom:8px;flex-wrap:wrap}
+#kpl-today .kt-track-nav {display:flex;align-items:center;gap:8px;margin-left:auto}
+#kpl-today .kt-track-nav button {border:1px solid #48605a;border-radius:5px;padding:4px 9px;background:#283b36;--kt-ink:#aee5d6;font-size:12px}
+#kpl-today .kt-track-nav button:disabled {opacity:.38;cursor:default}
+#kpl-today .kt-track-count {font:12px Consolas,monospace;--kt-ink:#edc17b;min-width:48px;text-align:center}
+#kpl-today .kt-track-stage {height:300px;overflow:hidden;position:relative;isolation:isolate;cursor:pointer;outline-offset:-3px}
+#kpl-today .kt-track-stage:focus-visible {outline:2px solid #8cd9c8}
+#kpl-today .kt-track-sheet {height:100%;padding:4px 14px 10px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;transform-origin:12% 80%}
+#kpl-today .kt-track-identity {display:flex;align-items:center;gap:10px;min-width:0}
+#kpl-today .kt-track-name {font-size:23px;font-weight:650;letter-spacing:.02em}
+#kpl-today .kt-track-code {font:12px Consolas,monospace;--kt-ink:#aebfc8}
+#kpl-today .kt-track-price {margin-left:auto;text-align:right;font-size:23px;font-weight:600;white-space:nowrap}
+#kpl-today .kt-track-price small {font-size:13px;display:block}
+#kpl-today .kt-track-tags {display:flex;gap:5px;flex-wrap:wrap;min-height:20px;max-height:47px;overflow:auto}
+#kpl-today .kt-track-tag {font-size:10px;line-height:18px;padding:0 5px;border:1px solid #45605a;background:#263b35;border-radius:3px;--kt-ink:#b2e3d4}
+#kpl-today .kt-track-tag.is-day {background:#38352b;border-color:#685e43;--kt-ink:#edc17b}
+#kpl-today .kt-track-meta {font-size:10px;--kt-ink:#b0c1ca;line-height:1.5;overflow-wrap:anywhere}
+#kpl-today .kt-track-grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid #34463f;border-bottom:1px solid #34463f;gap:7px;padding:9px 0}
+#kpl-today .kt-track-grid span {display:block;font-size:10px;--kt-ink:#aebfc8}
+#kpl-today .kt-track-grid b {display:block;font-size:13px;line-height:1.7;font-weight:550}
+#kpl-today .kt-track-grid small {font-size:9px;--kt-ink:#9fafb8;display:block}
+#kpl-today .kt-track-notes {min-height:0;overflow:auto;flex:1;scrollbar-width:auto;scrollbar-color:#789295 #17201e;overscroll-behavior:contain;font-size:11px;line-height:1.8;white-space:pre-line;--kt-ink:#c1cdd3;cursor:text}
+#kpl-today .kt-track-foot {display:flex;justify-content:space-between;gap:8px;padding:7px 13px;background:#131e1b;border-top:1px solid #34463f;font-size:10px;--kt-ink:#9eb7ad}
+#kpl-today .kt-track-foot [data-track-notice] {max-width:65%;--kt-ink:#edc17b}
+#kpl-today [data-track-open] {display:block;margin-top:5px;padding:4px 5px;border:1px solid #48605a;border-radius:4px;background:#243b33;--kt-ink:#b2e3d4;font-size:11px;white-space:nowrap}
+@media(max-width:650px){#kpl-today .kt-track-stage{height:355px}#kpl-today .kt-track-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#kpl-today .kt-track-name{font-size:21px}}

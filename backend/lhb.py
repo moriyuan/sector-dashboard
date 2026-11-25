@@ -1,5 +1,5 @@
 """Close-only, date-bound A-share public trading disclosures (龙虎榜)."""
-import fcntl
+from . import file_lock as fcntl
 import math
 import re
 from collections import defaultdict

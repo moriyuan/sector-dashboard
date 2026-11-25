@@ -306,7 +306,7 @@ def main():
     p.add_argument('--date',default=datetime.now(TZ).date().isoformat());p.add_argument('--db',default='runtime/market.sqlite3')
     p.add_argument('--changes',action='store_true');p.add_argument('--ths-json');p.add_argument('--analyze',type=int,default=0)
     args=p.parse_args();date.fromisoformat(args.date);ds=DailyStore(Store(args.db));provider=DailyProvider(ds.store)
-    import fcntl
+    from . import file_lock as fcntl
     lock=open(str(ds.store.path)+'.news.lock','a')
     fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     if args.ths_json:

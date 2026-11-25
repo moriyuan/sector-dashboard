@@ -52,7 +52,7 @@ export function DeskNav({news,seatBacktest=false,daily=false,barra=false,resonan
  },[news,seatBacktest,daily,barra,resonance,limitUp,midday]);
  return <header className="desk-nav"><div className="nav-inner">
  <a className="desk-brand" href="#top" aria-label="复盘研究台首页"><svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="7"/><path d="M8 22h4v5H8zm7-9h4v14h-4zm7-6h4v20h-4z" fill="currentColor"/></svg><b>复盘研究台</b></a>
- <nav className="desk-links" aria-label="复盘导航">{destinations.filter(([id])=>!midday||(id!=='national-team'&&id!=='lhb')).map(([id,label])=><a key={id} href={'#'+id}
+ <nav className="desk-links" aria-label="复盘导航"><a href="./api/short-term/">短线观察台</a>{destinations.filter(([id])=>!midday||(id!=='national-team'&&id!=='lhb')).map(([id,label])=><a key={id} href={'#'+id}
  aria-current={(seatBacktest?id==='seat-backtest':resonance?id==='resonance':barra?id==='barra':daily?id==='daily':limitUp?id==='limitup':news?id==='news':id===active)?'location':undefined} onClick={id==='news'?onNews:undefined}>{label}</a>)}</nav>
  <div className="nav-tools">{children}</div></div></header>;
 }

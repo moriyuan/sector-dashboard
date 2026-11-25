@@ -1,7 +1,7 @@
 """Post-close broad ETF monitoring. Primary-market estimates are investor-anonymous."""
 from collections import defaultdict
 from datetime import date, datetime
-import fcntl
+from . import file_lock as fcntl
 import json
 import math
 import re

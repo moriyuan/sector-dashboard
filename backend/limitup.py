@@ -4,7 +4,7 @@
 - 股票全集以东方财富涨停池为准（同花顺/开盘啦名单做并集补充，标注 sources）；
 - 题材分组以开盘啦复盘/梯队为准，未分组股票按同花顺涨停原因首标签归并；
 - 涨停原因：开盘啦原因全文优先，韭研公社异动解析补充，同花顺标签兜底；
-- 题材强度取开盘啦强度榜（仅近 2 个交易日），历史逐板块用 GetPlate_Info_QJ 回补；
+- 题材强度取开盘啦当前/历史分页榜，失败逐板块用 GetPlate_Info_QJ 回补；
 - 排序：题材按开盘啦强度降序（无强度按涨停数降序）；题材内按连板数降序、同身位按首封时间升序。
 
 每天 17:00（北京时间）自动采集当日数据并落库，失败每 10 分钟重试至 20:00；
@@ -14,7 +14,7 @@ import json
 import re
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -124,6 +124,16 @@ def _theme_match(name: str, candidates: dict) -> str | None:
 
 
 def collect(store, day: str, *, em=None, ths=None, kpl=None, jygs=None, today: str | None = None) -> dict:
+    owned_source = kpl is None
+    kpl = kpl or KaipanlaSource()
+    try:
+        return _collect(store, day, em=em, ths=ths, kpl=kpl, jygs=jygs, today=today)
+    finally:
+        if owned_source:
+            kpl.close()
+
+
+def _collect(store, day: str, *, em=None, ths=None, kpl=None, jygs=None, today: str | None = None) -> dict:
     """采集并聚合某日涨停汇总，写库后返回视图。单源失败降级并在 meta.sources 标注。"""
     em = em or EastmoneySource()
     ths = ths or ThsSource()
@@ -161,16 +171,16 @@ def collect(store, day: str, *, em=None, ths=None, kpl=None, jygs=None, today: s
     except SourceError as e:
         status['ths'] = f'fail:{e}'
 
-    # 3) 开盘啦：题材分组（当日用复盘含原因全文，历史用梯队）
+    # 3) 开盘啦：先读取有来源日期的完整复盘，失败再尝试经过日期验证的梯队。
     themes: dict[str, dict] = {}
     membership: dict[str, str] = {}   # code -> theme_code
     stats: dict = {}
     try:
-        if day >= today:
+        try:
             resumed = kpl.fetch_resumption(day)
             stats = {k: v for k, v in resumed['stats'].items() if v is not None}
             raw_themes = resumed['themes']
-        else:
+        except SourceError:
             raw_themes = kpl.fetch_sector_ladder(day)
         for t in raw_themes:
             if not t.get('code') or not t.get('name'):
@@ -204,18 +214,14 @@ def collect(store, day: str, *, em=None, ths=None, kpl=None, jygs=None, today: s
     if not stocks:
         raise SourceError(f'{day} 全部渠道均无涨停数据（{status}）')
 
-    # 4) 开盘啦题材强度：强度榜仅保留最近约 2 个交易日（取 4 个自然日窗口），更早逐板块回补
+    # 4) 开盘啦题材强度：当前/历史分页榜优先，失败逐板块回补。
     strengths: dict[str, dict] = {}
     try:
-        recent = day >= (datetime.now(TZ).date() - timedelta(days=4)).isoformat()
-        if recent:
-            for r in kpl.fetch_strength_board(day):
-                strengths[r['code']] = r
-            status['kpl_strength'] = f'ok:{len(strengths)}'
-            if not strengths:
-                raise SourceError('强度榜无数据，走逐板块回补')
-        else:
-            raise SourceError('历史日走逐板块回补')
+        for r in kpl.fetch_strength_board(day):
+            strengths[r['code']] = r
+        status['kpl_strength'] = f'ok:{len(strengths)}'
+        if not strengths:
+            raise SourceError('强度榜无数据，走逐板块回补')
     except SourceError:
         got = 0
         for code in [c for c in themes if not c.startswith('tag:')]:

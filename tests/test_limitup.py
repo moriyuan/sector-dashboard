@@ -212,7 +212,7 @@ def test_collect_merges_sources(store):
     assert result['sources']['jiuyangongshe'].startswith('ok')
 
 
-def test_collect_history_uses_ladder_and_sector_strength(store):
+def test_collect_history_uses_dated_replay_and_fallback_strength(store):
     em = FakeEM([em_row('600001', '甲', 2, '09:35:00')])
     ths = FakeTHS([ths_row('600001', '甲', '白酒+消费', '2连板', '09:35:00')])
     kpl = FakeKPL(
@@ -220,8 +220,8 @@ def test_collect_history_uses_ladder_and_sector_strength(store):
                  'stocks': [{'code': '600001', 'name': '甲', 'board_label': '2连板'}]}],
         strength={'801010': {'code': '801010', 'rank': 3, 'strength': 4100.0, 'date': HIST}})
     result = collect(store, HIST, em=em, ths=ths, kpl=kpl, jygs=FakeJYGS(usable=False), today='2026-11-11')
-    assert ('ladder', HIST) in kpl.calls and not any(c[0] == 'resumption' for c in kpl.calls)
-    assert ('board', HIST) not in kpl.calls                      # 历史日不走强度榜
+    assert ('resumption', HIST) in kpl.calls and ('ladder', HIST) not in kpl.calls
+    assert ('board', HIST) in kpl.calls                         # 历史分页榜优先
     assert ('strength', '801010', HIST) in kpl.calls             # 逐板块回补
     theme = result['themes'][0]
     assert theme['strength'] == 4100.0 and theme['strength_rank'] == 3
@@ -323,16 +323,16 @@ def test_kaipanla_parses_board_and_resumption():
 
     def fake_post(url, payload):
         if payload['a'] == 'RealRankingInfo':
-            return {'list': [['801001', '机器人', '5230', '2.1'], ['801002', '锂电池', '3100', '-0.5']]}
+            return {'Day': [DAY], 'Count': 2, 'list': [['801001', '机器人', '5230', '2.1'], ['801002', '锂电池', '3100', '-0.5']]}
         if payload['a'] == 'GetPlateInfo_w38':
-            return {'nums': {'ZT': 5, 'DT': 2, 'ZBL': '21%', 'SZJS': 3200, 'XDJS': 1800},
+            return {'date': DAY, 'nums': {'ZT': 1, 'DT': 2, 'ZBL': '21%', 'SZJS': 3200, 'XDJS': 1800},
                     'list': [{'ZSCode': '801001', 'ZSName': '机器人', 'TCExplain': ' 产业催化 ',
                               'StockList': [['300002', '丝杠乙', '', '', '20.0', '', 1794274260, 3, 2e8,
                                              '3天3板', '', '机器人、丝杠', '', '', '', '', '', '涨停原因全文']]}]}
         if payload['a'] == 'GetPlate_Info_QJ':
             return {'errcode': '0', 'List': ['3', '4100'], 'Date': HIST}
         if payload['a'] == 'GetYTFP_BKHX':
-            return {'List': [{'Count': 1, 'Reason': ' 中秋备货 ', 'ZSCode': '801010', 'ZSName': '白酒',
+            return {'Date': HIST, 'List': [{'Count': 1, 'Reason': ' 中秋备货 ', 'ZSCode': '801010', 'ZSName': '白酒',
                               'TD': [{'TDType': 1, 'Stock': [{'StockID': '600001', 'StockName': '甲', 'Tips': ' 2连板 '}]}]}]}
         raise AssertionError(payload)
 
@@ -341,7 +341,7 @@ def test_kaipanla_parses_board_and_resumption():
     board = src.fetch_strength_board(DAY)
     assert board[0] == {'code': '801001', 'name': '机器人', 'strength': 5230.0, 'change': 2.1, 'rank': 1}
     resumed = src.fetch_resumption(DAY)
-    assert resumed['stats']['limit_up'] == 5
+    assert resumed['stats']['limit_up'] == 1
     stock = resumed['themes'][0]['stocks'][0]
     assert stock['code'] == '300002' and stock['boards'] == 3 and stock['first_time'] == '09:31:00'
     assert stock['tags'] == ['机器人', '丝杠'] and stock['reason_full'] == '涨停原因全文'

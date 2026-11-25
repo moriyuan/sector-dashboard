@@ -358,6 +358,8 @@ class Collector:
 
     def shutdown(self):
         self.stop.set()
+        if getattr(self, 'kpl_thread', None):
+            self.kpl_thread.join(timeout=12)
 
 
 def metadata(snapshot, date, mode):

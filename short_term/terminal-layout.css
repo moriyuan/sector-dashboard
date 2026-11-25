@@ -1,0 +1,87 @@
+/* REQ-038: one grid defines the card boundaries; lists own their overflow. */
+#kpl-today .kt-layout {
+  display:grid;
+  grid-template-columns:minmax(300px,27fr) minmax(510px,50fr) minmax(240px,23fr);
+  grid-template-rows:340px 230px 500px 380px;
+  gap:10px;
+  align-items:stretch;
+  padding:0 12px 12px;
+}
+#kpl-today .kt-layout > :is(.kt-left,.kt-main,.kt-right) {display:contents}
+#kpl-today .kt-layout :is(.kt-panel,.bc-card) {min-width:0;min-height:0;margin:0;display:flex;flex-direction:column;overflow:hidden;border-radius:7px}
+#kpl-today .kt-board-panel {grid-column:1;grid-row:1 / 3}
+#kpl-today .kt-core-panel {grid-column:1;grid-row:3}
+#kpl-today .kt-loss-panel {grid-column:1;grid-row:4}
+#kpl-today .bc-card {grid-column:2;grid-row:1;padding:14px;gap:8px}
+#kpl-today .kt-trend-panel {grid-column:2;grid-row:2}
+#kpl-today .kt-ladder-panel {grid-column:2;grid-row:3}
+#kpl-today .kt-track-panel {grid-column:2;grid-row:4}
+#kpl-today .kt-tape-panel {grid-column:3;grid-row:1 / 5}
+
+#kpl-today :is(.kt-section-head,.kt-board-search,.kt-panel-note,.kt-tape-controls,.kt-tape-end,.rc-tabs,.bc-top,.bc-meta,.bc-nav,.bc-bottom,.kt-track-foot) {flex-shrink:0}
+#kpl-today .kt-layout :is(.kt-table-scroll,.kt-tape,.kt-ladder,.bc-body) {
+  flex:1;min-height:0;height:auto;max-height:none;
+  overflow-y:scroll;overscroll-behavior-y:contain;
+  scrollbar-width:auto;scrollbar-color:#789295 #10181c;scrollbar-gutter:stable;
+}
+#kpl-today .kt-layout :is(.kt-table-scroll,.kt-tape,.kt-ladder,.bc-body,.rc-scroll):focus-visible {outline:2px solid #8cd9c8;outline-offset:-2px}
+#kpl-today .kt-layout :is(.kt-table-scroll,.kt-tape,.kt-ladder,.bc-body,.rc-scroll)::-webkit-scrollbar {width:12px;height:10px}
+#kpl-today .kt-layout :is(.kt-table-scroll,.kt-tape,.kt-ladder,.bc-body,.rc-scroll)::-webkit-scrollbar-track {background:#10181c}
+#kpl-today .kt-layout :is(.kt-table-scroll,.kt-tape,.kt-ladder,.bc-body,.rc-scroll)::-webkit-scrollbar-thumb {background:#789295;border:3px solid #10181c;border-radius:8px;min-height:36px}
+#kpl-today .kt-loss-panel .kt-table-scroll {overflow-anchor:none}
+#kpl-today .kt-loss-panel .kt-table th {z-index:2}
+#kpl-today .kt-ladder {align-items:start;overflow-anchor:none}
+#kpl-today .kt-tier {min-height:100%}
+#kpl-today .kt-tape {display:block}
+#kpl-today .kt-tape-end {padding:10px}
+#kpl-today .kt-chart {flex:1;min-height:0;height:auto}
+#kpl-today .kt-trend-tabs {flex-shrink:0;max-height:54px;overflow:auto}
+#kpl-today .kt-track-stage {flex:1;min-height:0;height:auto}
+#kpl-today .kt-track-sheet {overflow:hidden}
+#kpl-today .kt-track-sheet > :not(.kt-track-notes) {flex-shrink:0}
+#kpl-today .kt-track-notes {min-height:32px}
+
+/* Keep management controls visible; details stay in the existing list scroller. */
+#kpl-today .kt-core-panel > [data-recent-pane] {
+  display:flex;flex-direction:column;flex:1;min-height:0;overflow:auto;
+  scrollbar-width:thin;scrollbar-color:#789295 #10181c;
+}
+#kpl-today .kt-core-panel .rc-scroll {flex:1;min-height:120px;max-height:none;overflow-y:scroll}
+#kpl-today .kt-core-panel :is(.rc-tools,.rc-hint,.rc-coverage,.rc-toast) {flex-shrink:0}
+#kpl-today .kt-core-panel .rc-tools {gap:5px;padding:0 10px 6px}
+#kpl-today .kt-core-panel .rc-tools input {flex:1 1 85px;width:85px}
+#kpl-today .kt-core-panel .rc-tools select {flex:1 1 85px;max-width:none;width:85px}
+#kpl-today .kt-core-panel .rc-hint {padding:5px 10px;font-size:11px;line-height:1.5}
+#kpl-today .kt-core-panel [data-w-quotes] {max-height:43px;overflow:auto}
+#kpl-today .kt-core-panel .rc-coverage {margin:0 10px 6px;max-height:100px;overflow:auto}
+#kpl-today .kt-core-panel .rc-toast:empty {display:none}
+#kpl-today .kt-core-panel [data-core-note] {max-height:72px;overflow:auto}
+#kpl-today .rc-tabs {margin-bottom:8px}
+
+@media(max-width:1179px) and (min-width:761px) {
+  #kpl-today .kt-layout {grid-template-columns:minmax(280px,40fr) minmax(420px,60fr);grid-template-rows:340px 230px 500px 390px 440px;padding:0 8px 10px;gap:10px}
+  #kpl-today .kt-tape-panel {grid-column:1 / -1;grid-row:5}
+  #kpl-today .kt-tape {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:0 18px}
+}
+@media(max-width:760px) {
+  #kpl-today .kt-layout {display:flex;flex-direction:column;padding:0 8px 10px;gap:10px}
+  #kpl-today .kt-layout > :is(.kt-left,.kt-main,.kt-right) {display:contents}
+  #kpl-today .kt-layout :is(.kt-panel,.bc-card) {width:100%;flex:none;min-width:0}
+  #kpl-today .bc-card {order:0;height:390px}
+  #kpl-today .kt-board-panel {order:1;height:460px}
+  #kpl-today .kt-trend-panel {order:2;height:250px}
+  #kpl-today .kt-core-panel {order:3;height:570px}
+  #kpl-today .kt-ladder-panel {order:4;height:500px}
+  #kpl-today .kt-track-panel {order:5;height:450px}
+  #kpl-today .kt-loss-panel {order:6;height:350px}
+  #kpl-today .kt-tape-panel {order:7;height:500px}
+  #kpl-today .kt-tape {display:block}
+  #kpl-today .kt-ladder {grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:max-content;align-content:start}
+  #kpl-today .kt-tier {min-height:0}
+  #kpl-today .kt-tier-head {position:sticky}
+  #kpl-today .kt-core-panel .rc-scroll {min-height:150px}
+  #kpl-today .kt-core-panel .kt-table {font-size:12px}
+  #kpl-today .kt-core-panel .kt-table th {font-size:11px}
+  #kpl-today .kt-track-nav {gap:5px}
+  #kpl-today .kt-track-nav button {padding:4px 7px}
+}

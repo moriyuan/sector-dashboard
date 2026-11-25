@@ -1,5 +1,6 @@
 """Independent restart-safe, bounded news ingestion / model worker."""
-import argparse,fcntl,json,os,signal,time,uuid,threading
+import argparse,json,os,signal,time,uuid,threading
+from . import file_lock as fcntl
 from datetime import datetime,timedelta
 from pathlib import Path
 import requests
